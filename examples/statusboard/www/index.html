@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>swagCore — статус ноды</title>
+<style>
+:root{--bg:#0f1115;--panel:#171a21;--border:#262b36;--text:#e6e9ef;--muted:#8b93a7;--ok:#3fb96f;--accent:#5b8cff}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--text);font:15px/1.6 system-ui,-apple-system,Segoe UI,sans-serif}
+.box{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:36px 44px;max-width:520px}
+.badge{display:inline-block;background:rgba(63,185,111,.15);color:var(--ok);padding:2px 12px;border-radius:12px;font-size:13px}
+h1{margin:12px 0 4px;font-size:22px}
+h1 span{color:var(--accent)}
+.up{font-variant-numeric:tabular-nums}
+table{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px}
+td{padding:4px 0;border-bottom:1px solid var(--border)}
+td:first-child{color:var(--muted)}
+tr:last-child td{border-bottom:none}
+footer{margin-top:18px;color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+<div class="box">
+<span class="badge">● running</span>
+<h1>swag<span>Core</span> — нода жива</h1>
+<p class="muted">Этот контейнер автоматически развёрнут платформой swagCore.</p>
+<table>
+<tr><td>Хост контейнера</td><td id="host">…</td></tr>
+<tr><td>Аптайм страницы</td><td class="up" id="uptime">0c 00:00:00</td></tr>
+<tr><td>Открыта</td><td id="opened"></td></tr>
+<tr><td>Браузер</td><td id="ua">…</td></tr>
+</table>
+<footer>swagCore v0.3 · project: statusboard · placement: all</footer>
+</div>
+<script>
+const t0 = Date.now();
+document.getElementById('opened').textContent = new Date().toLocaleString('ru-RU');
+document.getElementById('ua').textContent = navigator.userAgent.slice(0, 60) + '…';
+function tick() {
+  let s = Math.floor((Date.now() - t0) / 1000);
+  const d = Math.floor(s / 86400); s %= 86400;
+  const h = Math.floor(s / 3600); s %= 3600;
+  const m = Math.floor(s / 60); s %= 60;
+  document.getElementById('uptime').textContent =
+    d + 'д ' + String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+setInterval(tick, 1000); tick();
+fetch('/hostname.txt').then(r => r.ok ? r.text() : r.status).then(t => document.getElementById('host').textContent = t.trim()).catch(() => document.getElementById('host').textContent = 'н/д');
+</script>
+</body>
+</html>

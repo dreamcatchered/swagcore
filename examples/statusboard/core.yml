@@ -1,0 +1,9 @@
+name: statusboard
+image: python:3.11-slim
+command: python -m http.server 8200 --directory /www
+ports:
+  - "8200:8200"
+resources:
+  memory: 128m
+  cpus: "0.25"
+placement: all
