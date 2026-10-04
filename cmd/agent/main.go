@@ -69,10 +69,30 @@ func (p *program) run() {
 func main() {
 	sub, flagArgs := splitSubcommand(os.Args[1:])
 
+	// `version` обрабатываем ДО подключения лога к файлу.
+	// Вывод этой команды разбирают машинно: install.ps1 читает из него
+	// строку сборки, а selfupdate проверяет так скачанный бинарник.
+	// Если бы агент при этом писал в stderr (лог настроен на
+	// os.Stderr + файл), то в PowerShell 5.1 с $ErrorActionPreference="Stop"
+	// stderr нативной команды превращался в NativeCommandError и УБИВАЛ
+	// установку. Поэтому version обязан молчать в stderr и печатать
+	// ровно одну строку.
+	if sub == "version" {
+		fmt.Println(model.VersionTag())
+		return
+	}
+
+	// Лог в файл поднимаем ДО всего: иначе падение на старте (например,
+	// служба не смогла зарегистрироваться в SCM) не оставит следов.
+	agent.SetupFileLogging(agent.DataDirFromArgs(os.Args[1:]))
+
+
+
 	fs := flag.NewFlagSet("swagcore-agent", flag.ContinueOnError)
 	server := fs.String("server", envOr("SWAGCORE_SERVER", "ws://127.0.0.1:8181/agent"), "server WS URL")
 	token := fs.String("token", envOr("SWAGCORE_TOKEN", ""), "node token")
 	data := fs.String("data", defaultDataDir(), "data dir")
+	nodeName := fs.String("name", envOr("SWAGCORE_NODE_NAME", ""), "node name shown in UI (default: OS hostname)")
 	maxMem := fs.Int("max-mem", 0, "RAM limit for containers, MB (0 = no limit)")
 	maxDisk := fs.Int("max-disk", 0, "disk limit for platform projects, GB (0 = no limit)")
 	noDocker := fs.Bool("no-docker", false, "hide docker from scheduler")
@@ -80,7 +100,7 @@ func main() {
 
 	agent.SetDataDir(*data)
 	cfg := agent.Config{
-		ServerURL: *server, Token: *token, DataDir: *data,
+		ServerURL: *server, Token: *token, DataDir: *data, Name: *nodeName,
 		MaxMemMB: *maxMem, MaxDiskGB: *maxDisk, NoDocker: *noDocker,
 	}
 
@@ -153,8 +173,26 @@ func main() {
 	}
 }
 
+// buildSvcArgs — аргументы, с которыми СЕРВИС-МЕНЕДЖЕР запускает агента.
+//
+// БАГ (v0.6.0, найден на ноде angelica): сюда попадал подкомандный аргумент
+// "run". Из-за этого при старте из-под SCM выполнялась ветка
+//
+//	case "run", "foreground": agent.RunForever(cfg)
+//
+// то есть агент СРАЗУ уходил в бесконечный foreground-цикл и НИКОГДА не
+// вызывал svc.Run() -> StartServiceCtrlDispatcher(). А SCM без этого
+// рукопожатия не считает службу запущенной: через 30 с прилетает
+// Event ID 7009 "A timeout was reached while waiting for the service to
+// connect", служба помечается как не отвечающая и останавливается.
+//
+// Итог был ровно такой: нода подключалась на пару секунд (процесс-то работал)
+// и отваливалась — после перезагрузки ПК агент не поднимался вообще.
+//
+// Теперь в binPath НЕТ подкоманды: процесс, стартовавший без подкоманды,
+// доходит до svc.Run() и корректно регистрируется в SCM / systemd.
 func buildSvcArgs(cfg agent.Config) []string {
-	args := []string{"run", "--server", cfg.ServerURL, "--token", cfg.Token, "--data", cfg.DataDir}
+	args := []string{"--server", cfg.ServerURL, "--token", cfg.Token, "--data", cfg.DataDir}
 	if cfg.MaxMemMB > 0 {
 		args = append(args, "--max-mem", fmt.Sprintf("%d", cfg.MaxMemMB))
 	}
@@ -163,6 +201,9 @@ func buildSvcArgs(cfg agent.Config) []string {
 	}
 	if cfg.NoDocker {
 		args = append(args, "--no-docker")
+	}
+	if cfg.Name != "" {
+		args = append(args, "--name", cfg.Name)
 	}
 	return args
 }

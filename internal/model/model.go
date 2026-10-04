@@ -16,10 +16,10 @@ import (
 // "<Version>+<Build>" целиком, поэтому любая пересборка всегда доезжает до нод.
 // Формат version.txt на сервере: "0.6.0+ab12cd34".
 const (
-	Version = "0.6.0"
+	Version = "0.7.0"
 	// Build — вручную bumps при пересборке бинарников агента.
 	// Деплой-скрипт deploy/release.sh генерирует version.txt из Version+Build.
-	Build = "v0600"
+	Build = "v0700"
 )
 
 // VersionTag — полная строка версии для сравнения в selfupdate.

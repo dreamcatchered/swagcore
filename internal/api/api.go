@@ -526,8 +526,27 @@ func hostOnly(u string) string {
 // Именно её копирует пользователь на «чистую» Windows и вставляет в PowerShell:
 // скрипт сам скачивается, сам повышает права до администратора, ставит агента
 // как службу Windows, запускает и проверяет подключение.
+//
+// ТРИ причины, почему установка раньше падала (все исправлены в 0.7.0):
+//
+//  1. ExecutionPolicy. Вариант с токеном сохранял скрипт на диск и запускал
+//     как файл — на машине с Restricted/RemoteSigned это даёт «выполнение
+//     сценариев отключено». Скрипт исполняется В ПАМЯТИ, файл не создаётся.
+//
+//  2. Кодировка. irm на PowerShell 5.1 определяет кодировку по Content-Type.
+//     Nginx отдавал .ps1 как application/octet-stream без charset, поэтому на
+//     русской Windows (ACP=1251) UTF-8 декодировался как CP1251: в текст
+//     попадали «кавычки» из старших байтов, и парсер падал с ParseException
+//     ДО выполнения. Скрипт тянут через WebClient с явным UTF-8 — от
+//     заголовков сервера это больше не зависит.
+//
+//  3. BOM. [char]0xFEFF в начале строки ломает компиляцию scriptblock —
+//     вырезаем.
 func (s *Server) installCommandWin(token string) string {
-	return `irm https://` + hostOnly(s.PublicBase) + `/download/install.ps1 | iex`
+	h := hostOnly(s.PublicBase)
+	return `$swc = New-Object System.Net.WebClient; ` +
+		`$swc.Encoding = [System.Text.Encoding]::UTF8; ` +
+		`& ([scriptblock]::Create($swc.DownloadString("https://` + h + `/download/install.ps1").TrimStart([char]0xFEFF)))`
 }
 
 // installCommandWinToken — вариант с токеном, зашитым в команду (кнопка «скопировать»).
@@ -535,9 +554,11 @@ func (s *Server) installCommandWinToken(token, name string) string {
 	if name == "" {
 		name = "windows-node"
 	}
-	return `irm https://` + hostOnly(s.PublicBase) +
-		`/download/install.ps1 -OutFile $env:TEMP\swagcore-install.ps1; ` +
-		`& $env:TEMP\swagcore-install.ps1 -Token "` + token + `" -Name "` + name + `"`
+	h := hostOnly(s.PublicBase)
+	return `$swc = New-Object System.Net.WebClient; ` +
+		`$swc.Encoding = [System.Text.Encoding]::UTF8; ` +
+		`& ([scriptblock]::Create($swc.DownloadString("https://` + h + `/download/install.ps1").TrimStart([char]0xFEFF))) ` +
+		`-Token "` + token + `" -Name "` + name + `"`
 }
 
 // installCommandLinux — одна команда для Linux (root).

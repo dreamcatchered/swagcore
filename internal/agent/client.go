@@ -24,10 +24,11 @@ type Config struct {
 	ServerURL  string // ws(s)://host/agent
 	Token      string
 	DataDir    string
-	MaxMemMB   int     // лимит RAM для проектов платформы на этой ноде
-	MaxDiskGB  int     // лимит диска для проектов платформы (ГБ)
+	Name       string // имя ноды в UI; пусто = взять имя ОС
+	MaxMemMB   int    // лимит RAM для проектов платформы на этой ноде
+	MaxDiskGB  int    // лимит диска для проектов платформы (ГБ)
 	MaxCPUs    float64 // лимит CPU (ядер)
-	NoDocker   bool    // принудительно скрыть docker от планировщика
+	NoDocker   bool   // принудительно скрыть docker от планировщика
 }
 
 // RunForever — главный цикл: подключение, переподключение с бэкоффом.
@@ -99,8 +100,15 @@ func runOnce(cfg Config) error {
 	defer conn.Close()
 
 	hostname, _ := os.Hostname()
+	// Имя из --name (то, что пользователь ввёл при подключении ноды) важнее
+	// имени ОС: иначе нода «angelica» показывалась в UI как DESKTOP-955JQI1
+	// и её было невозможно опознать глазами.
+	displayName := strings.TrimSpace(cfg.Name)
+	if displayName == "" {
+		displayName = hostname
+	}
 	hello := model.Hello{
-		Hostname:   hostname,
+		Hostname:   displayName,
 		OS:         runtime.GOOS,
 		Arch:       runtime.GOARCH,
 		Version:    model.VersionTag(),
