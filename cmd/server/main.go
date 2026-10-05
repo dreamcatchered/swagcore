@@ -82,6 +82,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go h.Sweep(ctx)
+	go h.StartWatcher(ctx)
 
 	srv := &http.Server{
 		Addr:              *listen,

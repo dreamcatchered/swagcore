@@ -503,10 +503,20 @@ func (h *Hub) Sweep(ctx context.Context) {
 			return
 		case <-t.C:
 			if n, err := h.st.SweepOffline(2 * time.Minute); err == nil && n > 0 {
+				// Имена нод и алерты разбирает watcher (StartWatcher).
+				// Без него в лог попадало только «swept N offline node(s)»,
+				// и падение ноды можно было не заметить сутками — так
+				// и пропал компьютер angelica.
 				log.Printf("[hub] swept %d offline node(s)", n)
 			}
 		}
 	}
+}
+
+// StartWatcher запускает наблюдателя за падением нод: переход
+// online -> offline попадает в лог с именем, в события панели и в webhook.
+func (h *Hub) StartWatcher(ctx context.Context) {
+	go newWatcher(h.st, h).run(ctx.Done())
 }
 
 // ---------- утилиты ----------
