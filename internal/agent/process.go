@@ -62,17 +62,41 @@ func RunProcess(task model.DeployTask) (string, error) {
 		return "", fmt.Errorf("mkdir: %w", err)
 	}
 
-	// артефакт: скачать/распаковать если задан
+	// ПОРЯДОК ОПЕРАЦИЙ: сначала гасим прежний экземпляр, потом распаковываем.
+	//
+	// БАГ (v0.7.0, второй регресс process-деплоя, найден на ноде dream):
+	// распаковка шла ПЕРЕД остановкой старого процесса. На Windows
+	// работающий .exe держит файл заблокированным, поэтому повторный деплой
+	// падал с
+	//
+	//	artifact: extract: create ...primegrind.exe:
+	//	  The process cannot access the file because it is being used by
+	//	  another process.
+	//
+	// То есть redeploy на Windows не работал никогда — а redeploy это
+	// ровно то, что делает платформа при изменении манифеста, при миграции
+	// и при перезапуске упавшего проекта.
+	stopProcess(task.Name)
+	stopStaleProcesses(dir)
+	// Даём Windows освободить хендл exe, иначе Rename/Remove может
+	// ещё немного запаздывать после Stop-Process.
+	time.Sleep(1200 * time.Millisecond)
+
+	// Артефакт: скачать и распаковать, если задан.
+	//
+	// БАГ (v0.7.0, первый регресс process-деплоя на нодах angelica/dream):
+	// fetchArtifact распаковывала в sitesDir(), а проект живёт в
+	// appsDir(). Из-за этого resolveBin() не находил бинарник рядом с
+	// проектом, и запуск падал с
+	//
+	//	start: exec: "primegrind.exe": executable file not found in %PATH%
+	//
+	// Теперь распаковываем прямо в каталог проекта.
 	if task.ArtifactURL != "" {
-		if err := fetchArtifact(task.ArtifactURL, task.ArtifactSHA, task.Name, currentToken()); err != nil {
+		if err := fetchArtifact(task.ArtifactURL, task.ArtifactSHA, dir, currentToken()); err != nil {
 			return "", fmt.Errorf("artifact: %w", err)
 		}
 	}
-
-	// остановить предыдущий экземпляр, если жив
-	stopProcess(task.Name)
-	stopStaleProcesses(dir)
-	time.Sleep(1200 * time.Millisecond)
 
 	if strings.TrimSpace(task.Command) == "" {
 		return "", fmt.Errorf("process mode требует command")

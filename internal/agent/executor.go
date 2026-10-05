@@ -301,8 +301,8 @@ func RunningContainers() int {
 // fetchArtifact скачивает tar.gz артефакта проекта и распаковывает.
 // Заголовок X-Node-Token обязателен: с v0.6.0 /artifacts/ закрыт авторизацией
 // (раньше исходники проектов скачивал кто угодно по ссылке).
-func fetchArtifact(url, shaSum, projectName, token string) error {
-	dir := filepath.Join(sitesDir(), projectName)
+func fetchArtifact(url, shaSum, dest, token string) error {
+	dir := dest
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
@@ -320,9 +320,13 @@ func fetchArtifact(url, shaSum, projectName, token string) error {
 		}
 	}
 	// распаковка: tar есть на всех Linux и в Windows 10+
-	cmd := exec.Command("tar", "-xzf", tarPath, "-C", dir)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("tar: %v: %s", err, strings.TrimSpace(string(out)))
+	// Распаковка: целиком на Go (archive/tar + compress/gzip).
+	//
+	// Раньше здесь вызывался внешний tar. На ноде angelica tar.exe
+	// физически отсутствует, и любой process-проект с artifact: падал с
+	// "tar: executable file not found in %PATH%".
+	if err := extractTarGz(tarPath, dir); err != nil {
+		return fmt.Errorf("extract: %w", err)
 	}
 	os.Remove(tarPath)
 	return nil

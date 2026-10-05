@@ -63,6 +63,14 @@ func RunForever(cfg Config) {
 	}
 }
 
+// displayName — имя ноды для hello: явное из --name важнее имени ОС.
+func displayName(cfgName, osHostname string) string {
+	if n := strings.TrimSpace(cfgName); n != "" {
+		return n
+	}
+	return osHostname
+}
+
 // uploadFile отправляет файл на сервер (multipart /upload/{nodeID}).
 func uploadFile(cfg Config, name string, data []byte) error {
 	serverURL := cfg.ServerURL
@@ -136,15 +144,11 @@ func runOnce(cfg Config) error {
 	}()
 
 	hostname, _ := os.Hostname()
-	// Имя из --name (то, что пользователь ввёл при подключении ноды) важнее
-	// имени ОС: иначе нода «angelica» показывалась в UI как DESKTOP-955JQI1
-	// и её было невозможно опознать глазами.
-	displayName := strings.TrimSpace(cfg.Name)
-	if displayName == "" {
-		displayName = hostname
-	}
 	hello := model.Hello{
-		Hostname:   displayName,
+		// Имя из --name (то, что пользователь ввёл при подключении ноды) важнее
+		// имени ОС: иначе нода «angelica» показывалась в UI как DESKTOP-955JQI1
+		// и её было невозможно опознать глазами.
+		Hostname:   displayName(cfg.Name, hostname),
 		OS:         runtime.GOOS,
 		Arch:       runtime.GOARCH,
 		Version:    model.VersionTag(),

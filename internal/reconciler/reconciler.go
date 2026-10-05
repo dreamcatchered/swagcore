@@ -16,7 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dreamcatchered/swagcore/internal/hub"
 	"github.com/dreamcatchered/swagcore/internal/model"
 	"github.com/dreamcatchered/swagcore/internal/store"
 )
@@ -31,13 +30,27 @@ const (
 )
 
 // Reconciler — цикл сверки состояния.
+// NodeBus — то, что реконсилеру нужно от хаба.
+//
+// Зависимость от конкретного *hub.Hub делала реконсилер непроверяемым:
+// ни один сценарий нельзя было прогнать без живого WebSocket-хаба. После
+// введения интерфейса появились тесты на failover (в т.ч. регресс, где
+// реконсилер забывал отправить stop на исключённую ноду).
+type NodeBus interface {
+	IsOnline(nodeID int64) bool
+	Deploy(nodeID int64, task model.DeployTask) error
+	Stop(nodeID int64, task model.StopTask) error
+	RequestReconcile(nodeID int64) error
+	SetDriftCallback(fn func(drift [][2]int64))
+}
+
 type Reconciler struct {
 	st *store.Store
-	h  *hub.Hub
+	h  NodeBus
 }
 
 // New создаёт реконсилер.
-func New(st *store.Store, h *hub.Hub) *Reconciler {
+func New(st *store.Store, h NodeBus) *Reconciler {
 	return &Reconciler{st: st, h: h}
 }
 
@@ -213,6 +226,13 @@ func (r *Reconciler) tick() {
 		}
 
 		// 2) failover: экземпляры на нодах вне целевого множества
+		//
+		// БАГ (v0.7.0, найден при проверке миграции primegrind dream -> angelica):
+		// здесь ТОЛЬКО обновлялась запись в БД, а команда stop на ноду не
+		// уходила. В итоге платформа рапортовала «stopped», процесс на
+		// исключённой ноде продолжал работать, держал порт и ел ресурсы —
+		// а после возврата ноды в онлайн проект оказывался в двух местах
+		// сразу. Теперь отправляем stop и ждём подтверждения.
 		for _, in := range instances {
 			inTarget := false
 			for _, n := range targets {
@@ -222,6 +242,28 @@ func (r *Reconciler) tick() {
 				}
 			}
 			if inTarget {
+				continue
+			}
+			// ВАЖНО: здесь НЕТ проверки «уже InstStopped».
+			//
+			// Первая версия фикса её добавила, и выяснилось, что это ловушка:
+			// старый баг успевал записать InstStopped в БД, не отправив stop на
+			// ноду, — то есть база врала. Реконсилер, поверивший статусу,
+			// больше никогда не посылал stop, и осиротевший процесс держал
+			// порт месяцами. Запись в БД не является доказательством, что
+			// процесс на ноде остановлен; правда — в recon-ответе ноды.
+			//
+			// Поэтому stop шлём на каждый тик: он идемпотентен, а нода без
+			// процесса просто ничего не сделает. Сообщение одно на тик для
+			// исключённой ноды — цена несопоставима с зависшим процессом.
+			hostname := nodeHostname(nodes, in.NodeID)
+			log.Printf("[reconciler] %s: нода %s вне placement — останавливаем", p.Name, hostname)
+			task := model.StopTask{ProjectID: p.ID, Name: p.Name}
+			if err := r.h.Stop(in.NodeID, task); err != nil {
+				// Нода офлайн — остановить нечем, но и ждать нечего:
+				// когда она вернётся, recon увидит живой процесс и уберёт.
+				_ = r.st.SetInstanceStatus(p.ID, in.NodeID, model.InstOrphan, in.Container,
+					"вне placement, нода offline: "+err.Error())
 				continue
 			}
 			_ = r.st.SetInstanceStatus(p.ID, in.NodeID, model.InstStopped, in.Container, "")
@@ -355,3 +397,13 @@ func partialNote(failed, starting, missing, stopped int) string {
 }
 
 func itoa(v int) string { return strconv.Itoa(v) }
+
+// nodeHostname — имя ноды по id для читаемых логов.
+func nodeHostname(nodes []model.Node, id int64) string {
+	for i := range nodes {
+		if nodes[i].ID == id {
+			return nodes[i].Hostname
+		}
+	}
+	return "node#" + itoa(int(id))
+}
