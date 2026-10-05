@@ -19,7 +19,7 @@ const (
 	Version = "0.7.0"
 	// Build — вручную bumps при пересборке бинарников агента.
 	// Деплой-скрипт deploy/release.sh генерирует version.txt из Version+Build.
-	Build = "v0700"
+	Build = "v0703"
 )
 
 // VersionTag — полная строка версии для сравнения в selfupdate.

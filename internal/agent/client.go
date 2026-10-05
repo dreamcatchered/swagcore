@@ -49,7 +49,14 @@ func RunForever(cfg Config) {
 		if err := runOnce(cfg); err != nil {
 			log.Printf("[agent] session ended: %v; reconnect in %s", err, backoff)
 		}
-		time.Sleep(backoff)
+		// Пауза между попытками должна прерываться запросом остановки,
+		// иначе агент после stop() ещё до 60 секунд не выходил.
+		select {
+		case <-time.After(backoff):
+		case <-shutdownCh:
+			log.Println("[agent] получен запрос остановки — выход")
+			return
+		}
 		if backoff < 60*time.Second {
 			backoff *= 2
 		}
@@ -91,6 +98,23 @@ func uploadFile(cfg Config, name string, data []byte) error {
 	return nil
 }
 
+var (
+	shutdownOnce sync.Once
+	shutdownCh   = make(chan struct{})
+)
+
+// RequestShutdown просит агента штатно завершиться.
+//
+// БАГ (v0.7.0, найден на ноде dream): program.Stop() в cmd/agent закрывал
+// свой канал, но RunForever его никогда не проверял и крутился вечно. В
+// итоге `Restart-Service swagcore-agent` отдавал «Не удалось остановить
+// службу», SCM ждал таймаут и убивал процесс принудительно. Из-за этого
+// не работали ни перезапуск, ни нормальное uninstall, ни аккуратное
+// обновление — а любой сбой приходилось чинить руками.
+func RequestShutdown() {
+	shutdownOnce.Do(func() { close(shutdownCh) })
+}
+
 func runOnce(cfg Config) error {
 	hdr := httpHeaderWithToken(cfg.Token)
 	conn, _, err := websocket.DefaultDialer.Dial(cfg.ServerURL, hdr)
@@ -98,6 +122,18 @@ func runOnce(cfg Config) error {
 		return err
 	}
 	defer conn.Close()
+
+	// Штатная остановка должна разрывать и живое соединение, иначе цикл
+	// чтения не проснётся и агент будет висеть до таймаута SCM.
+	stopWatch := make(chan struct{})
+	defer close(stopWatch)
+	go func() {
+		select {
+		case <-shutdownCh:
+			_ = conn.Close()
+		case <-stopWatch:
+		}
+	}()
 
 	hostname, _ := os.Hostname()
 	// Имя из --name (то, что пользователь ввёл при подключении ноды) важнее
@@ -325,6 +361,10 @@ func handleCommand(env model.Envelope, cfg Config, sendStatus func(model.Project
 	}
 }
 
+// warnDockerMissingOnce — «docker не найден» печатается ОДИН раз за запуск
+// агента, а не на каждом цикле recon.
+var warnDockerMissingOnce sync.Once
+
 func reconOnce(cfg Config) error {
 	// v0.6.0: шлём не только docker-контейнеры, но и process-проекты с живостью
 	// процесса. Раньше ноды без Docker (process-режим) были «слепыми»: упавший
@@ -332,8 +372,19 @@ func reconOnce(cfg Config) error {
 	res := model.ReconResult{Containers: []model.ContainerInfo{}, Processes: []model.ProcessInfo{}}
 	infos, err := ListManaged()
 	if err != nil {
-		// docker может отсутствовать — это не ошибка, просто нечего докладывать
-		log.Printf("[agent] list managed: %v", err)
+		// Отсутствие Docker — НОРМА для process-режима, а не поломка.
+		// Раньше эта строка печаталась каждые 60 с («docker ps: executable
+		// file not found») и при 2 МиБ ротации вытесняла из agent.log все
+		// полезные записи, включая сообщения о падениях проектов.
+		// Теперь: если Docker есть, а список не получился — это настоящая
+		// ошибка, пишем каждый раз; если Docker нет — один раз за запуск.
+		if DockerAvailable() {
+			log.Printf("[agent] list managed: %v", err)
+		} else {
+			warnDockerMissingOnce.Do(func() {
+				log.Printf("[agent] docker не найден — доступен только process-режим")
+			})
+		}
 	}
 	for _, i := range infos {
 		res.Containers = append(res.Containers, model.ContainerInfo{Name: i.Name, Image: i.Image, Status: i.Status})

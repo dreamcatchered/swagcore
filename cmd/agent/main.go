@@ -9,6 +9,9 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync"
+	"time"
+
 
 	"github.com/kardianos/service"
 
@@ -44,6 +47,7 @@ func splitSubcommand(argv []string) (sub string, rest []string) {
 type program struct {
 	cfg  agent.Config
 	exit chan struct{}
+	once sync.Once
 }
 
 func (p *program) Start(s service.Service) error {
@@ -53,15 +57,28 @@ func (p *program) Start(s service.Service) error {
 }
 
 func (p *program) Stop(s service.Service) error {
+	// Сигналим агенту завершиться. Раньше здесь закрывался только локальный
+	// канал, который никто не слушал, и служба не останавливалась —
+	// SCM уходил в таймаут и убивал процесс принудительно, из-за чего
+	// Restart-Service/uninstall/обновление работали через ж*опу.
+	agent.RequestShutdown()
+	p.once.Do(func() {
+		if p.exit != nil {
+			close(p.exit)
+		}
+	})
+	// Даём RunForever вернуться: иначе SCM решит, что мы не ответили на
+	// stop, и применит принудительное завершение.
 	select {
 	case <-p.exit:
-	default:
-		close(p.exit)
+	case <-time.After(10 * time.Second):
+		log.Println("[agent] остановка дольше 10 c — выходим принудительно")
 	}
 	return nil
 }
 
 func (p *program) run() {
+	defer close(p.exit)
 	go agent.WatchProcess()
 	agent.RunForever(p.cfg)
 }
