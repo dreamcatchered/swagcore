@@ -821,9 +821,35 @@ const tplProjects = `{{define "projects"}}{{template "head" .}}
 <h2 id="deploy">Задеплоить новый проект</h2>
 <div class="panel">
   <p class="hint" style="margin:0 0 12px">Вставьте манифест в YAML. Если проекта с таким именем ещё нет — он создастся; если есть — обновится и перезапустится.</p>
+
+  <div class="panel" style="margin:0 0 14px;padding:12px">
+    <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+      <label style="display:flex;gap:6px;align-items:center;cursor:pointer">
+        <input type="radio" name="pl" value="all" checked onchange="syncPlacement()">
+        <span>на всех подходящих нодах</span>
+      </label>
+      <label style="display:flex;gap:6px;align-items:center;cursor:pointer">
+        <input type="radio" name="pl" value="selected" onchange="syncPlacement()">
+        <span>только выбранные ноды</span>
+      </label>
+    </div>
+    <div id="node-picker" style="display:none;gap:14px;flex-wrap:wrap">
+      {{range .Nodes}}
+      <label class="npick" data-node="{{.ID}}" title="{{.Hostname}} · {{.OS}} · id={{.ID}}"
+             style="display:flex;gap:6px;align-items:center;cursor:pointer;padding:4px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg2)">
+        <input type="checkbox" class="npick-cb" value="{{.ID}}" onchange="syncPlacement()">
+        <span>{{.Hostname}}</span>
+        <span class="sub" style="font-size:11px">#{{.ID}}</span>
+        {{if eq .Status "online"}}<span style="color:var(--ok)">●</span>{{else}}<span style="color:var(--err)">○</span>{{end}}
+      </label>
+      {{end}}
+    </div>
+    <div class="hint" id="pl-hint" style="margin-top:8px"></div>
+  </div>
+
   <form method="post" action="/api/action" onsubmit="return act(this,event)" data-refresh="2000">
     <input type="hidden" name="__do" value="/projects/deploy">
-    <textarea name="yaml" spellcheck="false">name: mysite
+    <textarea name="yaml" id="yaml-manifest" spellcheck="false">name: mysite
 # ── Что запустить ──────────────────────────────────────────────
 image: nginx:alpine           # Docker-образ
 # ports: ["80:80"]            # порт, который видно снаружи
@@ -839,8 +865,10 @@ resources:
   memory: 256m                # напр. 256m / 1g
   cpus: "0.5"                 # доля ядра
 #
-# ── Куда разместить ───────────────────────────────────────────
-placement: all                # all = все подходящие ноды
+# ── Куда разместить (меняется переключателем выше) ─────────────
+placement: all
+# placement: selected         # только ноды, отмеченные выше
+# nodes: [6, 5]               # id нод
 # preferred_node: vm4168356   # или закрепить за конкретной нодой
 #
 # ── Публичный адрес ───────────────────────────────────────────
@@ -856,6 +884,49 @@ placement: all                # all = все подходящие ноды
     </div>
   </form>
 </div>
+<script>
+// syncPlacement — записывает выбор нод в YAML-манифест.
+//
+// Переключатель «только выбранные» обязан давать placement: selected с
+// явным списком id: без этого PickNode/reconciler решают по-старому и
+// проект уезжает на любую ноду. Пустой список id при selected — ошибка,
+// поэтому при пустом выборе подсказываем и не даём молча получить «all».
+function syncPlacement() {
+  var ta = document.getElementById("yaml-manifest");
+  var picker = document.getElementById("node-picker");
+  var hint = document.getElementById("pl-hint");
+  if (!ta || !picker) return;
+
+  var selected = document.querySelector('input[name=pl]:checked').value === "selected";
+  picker.style.display = selected ? "flex" : "none";
+
+  var ids = [];
+  picker.querySelectorAll(".npick-cb:checked").forEach(function (cb) { ids.push(parseInt(cb.value, 10)); });
+
+  // выкидываем старые placement/nodes и пишем новые
+  var lines = ta.value.split("\n").filter(function (l) {
+    return !/^placement:/.test(l) && !/^#\s*placement:/.test(l) &&
+           !/^nodes:/.test(l) && !/^#\s*nodes:/.test(l);
+  });
+  while (lines.length && lines[lines.length - 1].trim() === "") lines.pop();
+
+  if (selected) {
+    if (!ids.length) {
+      hint.textContent = "Ни одна нода не отмечена — проект не запустится. Отметьте хотя бы одну.";
+      hint.style.color = "var(--err)";
+    } else {
+      hint.textContent = "Проект поедет только на: " + ids.join(", ");
+      hint.style.color = "var(--ok)";
+    }
+    lines.push("placement: selected");
+    lines.push("nodes: [" + ids.join(", ") + "]");
+  } else {
+    hint.textContent = "";
+    lines.push("placement: all");
+  }
+  ta.value = lines.join("\n") + "\n";
+}
+</script>
 {{template "foot" .}}{{end}}`
 
 // ---------- Проект (детальная) ----------
