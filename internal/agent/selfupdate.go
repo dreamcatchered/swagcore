@@ -199,9 +199,23 @@ func downloadAndSwap(serverURL string) error {
 	}
 	// .old НЕ удаляем — ручной откат одной командой
 	fmt.Println("[agent] updated binary at", filepath.Base(me), "- restarting service...")
-	// служба перезапустится сама (Restart=always / SCM), текущий процесс выходим
-	prepareSelfUpdate() // без сервис-менеджера перезапускаем себя сами
-	os.Exit(0)
+
+	// Без сервис-менеджера перезапускаем себя сами.
+	prepareSelfUpdate()
+
+	// Выходим НЕНУЛЕВЫМ кодом — и это принципиально.
+	//
+	// БАГ (v0.7.0, нода dream): здесь был os.Exit(0). Для SCM выход с кодом
+	// 0 — это «служба корректно остановлена», поэтому recovery-действия
+	// (sc failure ... actions=restart/5000/...) НЕ срабатывают. Платформа
+	// отправляла команду обновления, агент подменял бинарник и спокойно
+	// засыпал — нода пропадала до перезагрузки ПК.
+	//
+	// Ненулевой код SCM трактует как «нештатное завершение» (Event 7031) и
+	// применяет восстановление, то есть служба поднимается на новом бинарнике.
+	// Под systemd тот же ненулевой код даёт restart по Restart=always.
+	log.Printf("[agent] self-update done, exiting with code 1 so the service manager restarts us")
+	os.Exit(1)
 	return nil
 }
 
