@@ -246,6 +246,7 @@ func readSOCKSHost(r io.Reader, atyp byte) (string, error) {
 }
 
 func (g *Gateway) serveSOCKSUDP(control net.Conn, br *bufio.Reader) {
+	_ = control.SetDeadline(time.Time{})
 	pc, err := net.ListenPacket("udp", "0.0.0.0:0")
 	if err != nil {
 		_, _ = control.Write([]byte{5, 1, 0, 1, 0, 0, 0, 0, 0, 0})
