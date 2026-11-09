@@ -446,7 +446,9 @@ func (s *Store) SetNodeLimits(id int64, maxMemMB int, maxCPUs float64, maxDiskGB
 func (s *Store) SetNodeDisplayName(id int64, name string) error {
 	_, err := s.db.Exec(`UPDATE nodes SET display_name=? WHERE id=?`, name, id)
 	return err
-}func boolInt(b bool) int {
+}
+
+func boolInt(b bool) int {
 	if b {
 		return 1
 	}
@@ -547,7 +549,7 @@ func (s *Store) MarkTokenUsed(hash, hostname string) {
 	_, _ = s.db.Exec(`UPDATE node_tokens SET used=1, used_by=? WHERE token_hash=?`, hostname, hash)
 }
 
-// DeleteToken удаляет ��окен.
+// DeleteToken удаляет токен.
 func (s *Store) DeleteToken(id int64) error {
 	_, err := s.db.Exec(`DELETE FROM node_tokens WHERE id=?`, id)
 	return err
@@ -895,7 +897,8 @@ func (s *Store) ListProjects() ([]model.Project, error) {
 }
 
 // DeleteProject удаляет проект из БД КАСКАДНО.
-//// v0.6.0 (баг v0.5.x): удалялась только строка из projects, а экземпляры в
+//
+// v0.6.0 (баг v0.5.x): удалялась только строка из projects, а экземпляры в
 // instances оставались сиротами (project_id указывал на несуществующий проект).
 // Из-за этого планировщик/реконсилер видели «проект на ноде», которого нет, а
 // панель показывала мусорные строки. Теперь чистим instances и logs.

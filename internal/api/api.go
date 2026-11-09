@@ -447,7 +447,8 @@ func (s *Server) apiLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	logs, err := s.St.GetLogs(id, 500)
-	if err != nil {httpError(w, err)
+	if err != nil {
+		httpError(w, err)
 		return
 	}
 	writeJSON(w, logs)
@@ -694,7 +695,7 @@ func fileSHA256Local(path string) (string, error) {
 }
 
 // handleAgentUpload принимает файлы от агентов (скриншоты).
-// Авторизация: [REDACTED:bearer-auth:13]токен ИЛИ X-Node-Token (валидный токен ноды).
+// Авторизация: токен администратора ИЛИ X-Node-Token (валидный токен ноды).
 func (s *Server) handleAgentUpload(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "POST only", 405)
@@ -779,7 +780,7 @@ func (s *Server) handleCreateToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.St.AddEvent("info", "api", fmt.Sprintf("создан токен ноды «%s» (лимиты: %d МБ / %.1f CPU / %d ГБ)", name, maxMem, maxCPUs, maxDisk))
-	jsonRedirect(w, "/add-node", "токен создан ✓ �� скопируйте команду установки ниже")
+	jsonRedirect(w, "/add-node", "токен создан ✓ — скопируйте команду установки ниже")
 }
 
 // handleDeleteToken удаляет неиспользованный токен ноды.
@@ -896,7 +897,8 @@ func (s *Server) handleNodeMaxMem(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleNodeExec выполняет команду на ноде.
-func (s *Server) handleNodeExec(w http.ResponseWriter, r *http.Request) {_ = r.ParseForm()
+func (s *Server) handleNodeExec(w http.ResponseWriter, r *http.Request) {
+	_ = r.ParseForm()
 	id, _ := strconv.ParseInt(r.PostFormValue("id"), 10, 64)
 	command := strings.TrimSpace(r.PostFormValue("command"))
 	timeout, _ := strconv.Atoi(r.PostFormValue("timeout"))
@@ -1344,7 +1346,9 @@ func isHTTPS(r *http.Request) bool {
 		return true
 	}
 	return strings.HasPrefix(r.Header.Get("X-Forwarded-Proto"), "https")
-}// ---------- Страницы ----------
+}
+
+// ---------- Страницы ----------
 
 func (s *Server) handlePage(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/login" {
@@ -1793,7 +1797,8 @@ func sinceHuman(t time.Time) string {
 		return fmt.Sprintf("%d ч назад", int(d.Hours()))
 	default:
 		return fmt.Sprintf("%d дн назад", int(d.Hours()/24))
-	}}
+	}
+}
 
 // ---------- ИИ-агент: HTTP API ----------
 
