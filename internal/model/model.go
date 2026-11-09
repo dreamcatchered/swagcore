@@ -43,7 +43,7 @@ type Node struct {
 	ID          int64             `json:"id"`
 	TokenHash   string            `json:"-"`
 	Hostname    string            `json:"hostname"`
-	DisplayName string            `json:"display_name,omitempty"` // UI label; does not change the agent hostname
+	DisplayName string            `json:"-"` // admin-only display label; keep agent/public JSON contract unchanged
 	OS          string            `json:"os"`
 	Arch        string            `json:"arch"`
 	AgentVer    string            `json:"agent_version"`
@@ -67,7 +67,7 @@ type Node struct {
 	InstanceID string `json:"instance_id,omitempty"`
 }
 
-// NodeToken — именованный токен подключения ��оды.
+// NodeToken — именованный токен подключения ноды.
 type NodeToken struct {
 	ID        int64     `json:"id"`
 	Name      string    `json:"name"`
@@ -328,7 +328,7 @@ type LogsChunk struct {
 //
 // v0.6.0: раньше агент отдавал только docker-контейнеры, поэтому для нод без
 // Docker (process-режим, типичная Windows-машина за NAT) drift-детекция была
-// слепой: упавший ��роцесс числился running навсегда. Теперь агент сообщает и
+// слепой: упавший процесс числился running навсегда. Теперь агент сообщает и
 // про процессы (pid + живость), и сервер сверяет оба вида.
 type ReconResult struct {
 	Containers []ContainerInfo `json:"containers"`
