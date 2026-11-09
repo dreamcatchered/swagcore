@@ -1,6 +1,10 @@
 package store
 
-import "testing"
+import (
+	"encoding/json"
+	"strings"
+	"testing"
+)
 
 func TestNodeDisplayNameIsIndependentFromAgentHostname(t *testing.T) {
 	st, err := Open(t.TempDir())
@@ -35,5 +39,12 @@ func TestNodeDisplayNameIsIndependentFromAgentHostname(t *testing.T) {
 	}
 	if n.Hostname != "workstation-01-renamed-by-os" {
 		t.Fatalf("agent hostname was changed unexpectedly: %q", n.Hostname)
+	}
+	payload, err := json.Marshal(n)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(payload), "display_name") || strings.Contains(string(payload), "Домашний сервер") {
+		t.Fatalf("admin-only label leaked into the public node JSON: %s", payload)
 	}
 }
