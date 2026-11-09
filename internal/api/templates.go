@@ -19,6 +19,9 @@ const tplRoot = `{{define "head"}}<!doctype html>
 <meta name="color-scheme" content="light">
 <title>{{.Title}} · swagCore</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#0a0c11; --panel:#111520; --panel2:#171c2a; --panel3:#1e2434;
@@ -29,18 +32,17 @@ const tplRoot = `{{define "head"}}<!doctype html>
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,sans-serif;-webkit-font-smoothing:antialiased}
+body{background:var(--bg);color:var(--text);font:14px/1.6 "Manrope",sans-serif;-webkit-font-smoothing:antialiased}
 a{color:var(--accent);text-decoration:none}
 a:hover{text-decoration:underline}
-code,.mono,pre{font-family:ui-monospace,"SF Mono",Cascadia Code,Consolas,monospace}
+code,.mono,pre{font-family:"Manrope",sans-serif}
 
 /* ---------- каркас ---------- */
 .layout{display:flex;min-height:100vh}
 .sidebar{width:230px;flex:0 0 230px;background:var(--panel);border-right:1px solid var(--border);
   padding:20px 0;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
 .brand{display:flex;align-items:center;gap:9px;padding:0 20px 16px;font-weight:700;font-size:18px;letter-spacing:-.02em}
-.brand .dotmark{width:9px;height:9px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));
-  box-shadow:0 0 10px var(--accent)}
+
 .brand small{display:block;font-size:11px;color:var(--dim);font-weight:500;letter-spacing:0}
 .navlink{display:flex;align-items:center;gap:10px;padding:9px 20px;color:var(--muted);font-size:13.5px;
   border-left:2px solid transparent;transition:background .12s,color .12s}
@@ -174,7 +176,7 @@ input[type=text],input[type=password],input[type=number],select,textarea{
   padding:9px 12px;font-size:14px;font-family:inherit;width:100%}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(91,140,255,.14)}
 select{cursor:pointer}
-textarea{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;line-height:1.6;min-height:230px;resize:vertical}
+textarea{font-family:"Manrope",sans-serif;font-size:12.5px;line-height:1.6;min-height:230px;resize:vertical}
 label.fl{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted);font-weight:500}
 label.fl input,label.fl select{min-width:0}
 .formgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:11px;align-items:end}
@@ -236,9 +238,9 @@ pre.out{background:#07090d;border:1px solid var(--border);border-radius:6px;padd
   --accent:#2563eb;--accent2:#1e40af;
   --ok:#15803d;--warn:#c2410c;--err:#dc2626;
   --r:12px;--r2:8px;
-  --font-display:"Satoshi","Avenir Next","Manrope",sans-serif;
-  --font-body:"Inter","Segoe UI",Arial,sans-serif;
-  --font-mono:"Geist Mono","IBM Plex Mono",Consolas,monospace;
+  --font-display:"Manrope",sans-serif;
+  --font-body:"Manrope",sans-serif;
+  --font-mono:"Manrope",sans-serif;
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;min-height:100%;background:var(--bg)}
@@ -248,9 +250,8 @@ a:hover{text-decoration:underline}
 code,.mono,pre,.mono-id{font-family:var(--font-mono)}
 .layout{display:flex;min-height:100vh}
 .sidebar{width:226px;flex:0 0 226px;background:#fff;border-right:1px solid var(--border);padding:22px 12px 16px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
-.brand{display:flex;align-items:center;gap:10px;padding:0 12px 24px;font:500 18px/1 var(--font-display);letter-spacing:-.03em;color:#171717}
-.brand .dotmark{width:25px;height:25px;border-radius:8px;background:#171717;box-shadow:none;position:relative}
-.brand .dotmark:after{content:"s";position:absolute;inset:0;display:grid;place-items:center;color:#fff;font:600 16px var(--font-display)}
+.brand{display:flex;align-items:center;gap:10px;padding:0 12px 24px;font:700 19px/1.1 var(--font-display);letter-spacing:-.045em;color:#09090b}
+
 .brand small{display:block;margin-top:5px;font:11px/1.2 var(--font-body);color:#737373;letter-spacing:0}
 .navlink{display:flex;align-items:center;gap:10px;padding:10px 12px;margin:2px 0;color:#525252;font-size:13px;border:0;border-radius:8px;transition:background .14s,color .14s}
 .navlink:hover{background:#f5f5f5;color:#171717;text-decoration:none}
@@ -419,7 +420,6 @@ pre.out{margin:0;max-height:220px;font-size:10.5px}
  .layout{flex-direction:column}
  .sidebar{width:100%;flex:none;height:auto;position:sticky;top:0;z-index:30;flex-direction:row;overflow-x:auto;padding:8px 10px;align-items:center;gap:3px;border-right:0;border-bottom:1px solid var(--border)}
  .brand{padding:0 10px 0 2px;border:0;font-size:14px;flex:0 0 auto}
- .brand .dotmark{width:22px;height:22px}
  .brand small{display:none}
  .navlink{margin:0;padding:8px 10px;white-space:nowrap;font-size:12px;flex:0 0 auto}
  .sidebar-foot{display:none}
@@ -454,7 +454,7 @@ pre.out{margin:0;max-height:220px;font-size:10.5px}
 </head>
 <body><div class="layout">
 <nav class="sidebar">
-  <div class="brand"><span class="dotmark"></span><div>swagCore<small>панель управления платформой</small></div></div>
+  <div class="brand"><div>swagCore<small>панель управления платформой</small></div></div>
   <a href="/"       class="navlink {{if eq .Active "dashboard"}}active{{end}}"><span class="ic">◈</span>Обзор</a>
   <a href="/nodes"  class="navlink {{if eq .Active "nodes"}}active{{end}}"><span class="ic">▤</span>Ноды</a>
   <a href="/projects" class="navlink {{if eq .Active "projects"}}active{{end}}"><span class="ic">◧</span>Проекты</a>
@@ -1257,10 +1257,13 @@ const tplLogin = `{{define "login"}}<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
 <title>Вход · swagCore</title><link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
  :root{--bg:#ffffff;--panel:#ffffff;--border:#e5e5e5;--text:#171717;--muted:#525252;--accent:#2563eb;--err:#dc2626;--ok:#15803d}
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:#f5f5f5;color:var(--text);font:14px/1.6 "Inter","Segoe UI",Arial,sans-serif}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:#f5f5f5;color:var(--text);font:14px/1.6 "Manrope",sans-serif}
 .box{width:100%;max-width:390px;background:#fff;border:1px solid var(--border);border-radius:16px;padding:32px}
 h1{font-size:21px;margin:0 0 4px;letter-spacing:-.02em}
 h1 b{font-weight:700}
