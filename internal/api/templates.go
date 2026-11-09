@@ -447,7 +447,8 @@ pre.out{margin:0;max-height:220px;font-size:10.5px}
  .terminal-form .btn{width:100%}
 }
 @media(prefers-reduced-motion:reduce){
- *,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+ *,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
 
 </style>
 </head>
@@ -896,7 +897,8 @@ const tplAddNode = `{{define "addnode"}}{{template "head" .}}
     <div class="cmdblock" style="margin-top:9px">
       <code id="cmd-win2">{{.CmdWinM}}</code>
       <button class="btn" type="button" onclick="copyCode('cmd-win2',this)">Скопировать</button>
-    </div></details>
+    </div>
+  </details>
 
   <div class="panel accent" style="margin:18px 0 0">
     <h3>Что произойдёт на новой машине</h3>
@@ -950,7 +952,7 @@ const tplAddNode = `{{define "addnode"}}{{template "head" .}}
     <p class="sub"><b>Windows.</b> Открыли PowerShell, вставили одну строку, нажали Enter, согласились на запрос прав. Через полминуты нода в панели. Больше ничего делать не нужно — не нужны Python, Docker, Git или настройки.</p>
     <p class="sub"><b>Linux.</b> Та же команда через <span class="mono">sudo</span>. Установщик дополнительно поставит Docker, если его ещё нет.</p>
     <p class="sub"><b>Что дальше.</b> Нода сразу доступна для деплоя проектов: <a href="/projects#deploy">Проекты → Задеплоить</a>. Ничего больше настраивать не нужно.</p>
-    <p class="hint">Ноды за натом (домашний ПК без белого IP) работают: агент сам устанавливает исходящее ��оединение, входящие порты не нужны.</p>
+    <p class="hint">Ноды за натом (домашний ПК без белого IP) работают: агент сам устанавливает исходящее соединение, входящие порты не нужны.</p>
   </div>
 </div>
 
@@ -1010,9 +1012,9 @@ const tplProjects = `{{define "projects"}}{{template "head" .}}
   {{$nodes := $.Nodes}}
   {{range .Instances}}
     {{$instNodeID := .NodeID}}
-    {{$hn := ""}}{{range $nodes}}{{if eq .ID $instNodeID}}{{$hn = .Hostname}}{{end}}{{end}}
+    {{$hn := ""}}{{range $nodes}}{{if eq .ID $instNodeID}}{{if .DisplayName}}{{$hn = .DisplayName}}{{else}}{{$hn = .Hostname}}{{end}}{{end}}{{end}}
     <span class="badge b-{{.Status}}"{{if eq .Status "failed"}} title="{{.Error}}"{{end}}>
-      {{if $hn}}<a style="color:inherit" href="/nodes/{{$instNodeID}}">{{$hn}}</a>{{else}}нода {{$instNodeID}}{{end}}: {{if eq .Status "running"}}работает{{else if eq .Status "failed"}}ошибка{{else if eq .Status "starting"}}запускает��я{{else if eq .Status "orphan"}}нода не в сети{{else}}{{.Status}}{{end}}
+      {{if $hn}}<a style="color:inherit" href="/nodes/{{$instNodeID}}">{{$hn}}</a>{{else}}нода {{$instNodeID}}{{end}}: {{if eq .Status "running"}}работает{{else if eq .Status "failed"}}ошибка{{else if eq .Status "starting"}}запускается{{else if eq .Status "orphan"}}нода не в сети{{else}}{{.Status}}{{end}}
     </span>
   {{else}}
     <span class="chip warn">нет экземпляров — платформа ещё не разместила проект</span>
@@ -1064,11 +1066,11 @@ const tplProjects = `{{define "projects"}}{{template "head" .}}
     </div>
     <div id="node-picker" style="display:none;gap:14px;flex-wrap:wrap">
       {{range .Nodes}}
-      <label class="npick" data-node="{{.ID}}" title="{{.Hostname}} · {{.OS}} · id={{.ID}}"
+      <label class="npick" data-node="{{.ID}}" title="{{if .DisplayName}}{{.DisplayName}}{{else}}{{.Hostname}}{{end}} · {{.Hostname}} · {{.OS}} · id={{.ID}}"
              style="display:flex;gap:6px;align-items:center;cursor:pointer;padding:4px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg2)">
         <input type="checkbox" class="npick-cb" value="{{.ID}}" onchange="syncPlacement()">
-        <span>{{.Hostname}}</span>
-        <span class="sub" style="font-size:11px">#{{.ID}}</span>
+        <span>{{if .DisplayName}}{{.DisplayName}}{{else}}{{.Hostname}}{{end}}</span>
+        <span class="sub" style="font-size:11px">{{.Hostname}} · #{{.ID}}</span>
         {{if eq .Status "online"}}<span style="color:var(--ok)">●</span>{{else}}<span style="color:var(--err)">○</span>{{end}}
       </label>
       {{end}}
@@ -1192,7 +1194,7 @@ const tplProject = `{{define "project"}}{{template "head" .}}
 <thead><tr><th>Нода</th><th>Состояние</th><th>Контейнер / процесс</th><th>Обновлено</th><th>Сообщение агента</th></tr></thead>
 <tbody>
 {{range .Instances}}
-{{$instNodeID := .NodeID}}{{$hn := ""}}{{range $.Nodes}}{{if eq .ID $instNodeID}}{{$hn = .Hostname}}{{end}}{{end}}
+{{$instNodeID := .NodeID}}{{$hn := ""}}{{range $.Nodes}}{{if eq .ID $instNodeID}}{{if .DisplayName}}{{$hn = .DisplayName}}{{else}}{{$hn = .Hostname}}{{end}}{{end}}{{end}}
 <tr>
   <td><a href="/nodes/{{$instNodeID}}" class="link-plain">{{if $hn}}{{$hn}}{{else}}нода {{$instNodeID}}{{end}}</a></td>
   <td><span class="badge b-{{.Status}}">{{if eq .Status "running"}}работает{{else if eq .Status "failed"}}ошибка{{else if eq .Status "starting"}}запускается{{else if eq .Status "orphan"}}нода не в сети{{else if eq .Status "stopped"}}остановлен{{else}}{{.Status}}{{end}}</span></td>
@@ -1345,7 +1347,8 @@ function renderMsg(m){
   if (m.tools){ try{ const steps = JSON.parse(m.tools);
     if (Array.isArray(steps) && steps.length) html += '<span class="tools">выполнено действий: ' + steps.length + ' — ' + esc(steps.join(' · ')) + '</span>';
   }catch(e){} }
-  el.innerHTML = html; return el;}
+  el.innerHTML = html; return el;
+}
 async function loadChats(){
   const j = await jget('/api/ai/chats');
   const box = document.getElementById('chat-list'); box.innerHTML = '';
