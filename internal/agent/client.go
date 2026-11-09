@@ -17,18 +17,19 @@ import (
 	"github.com/gorilla/websocket"
 
 	"github.com/dreamcatchered/swagcore/internal/model"
+	proxytransport "github.com/dreamcatchered/swagcore/internal/proxy"
 )
 
 // Config — конфиг агента.
 type Config struct {
-	ServerURL  string // ws(s)://host/agent
-	Token      string
-	DataDir    string
-	Name       string // имя ноды в UI; пусто = взять имя ОС
-	MaxMemMB   int    // лимит RAM для проектов платформы на этой ноде
-	MaxDiskGB  int    // лимит диска для проектов платформы (ГБ)
-	MaxCPUs    float64 // лимит CPU (ядер)
-	NoDocker   bool   // принудительно скрыть docker от планировщика
+	ServerURL string // ws(s)://host/agent
+	Token     string
+	DataDir   string
+	Name      string  // имя ноды в UI; пусто = взять имя ОС
+	MaxMemMB  int     // лимит RAM для проектов платформы на этой ноде
+	MaxDiskGB int     // лимит диска для проектов платформы (ГБ)
+	MaxCPUs   float64 // лимит CPU (ядер)
+	NoDocker  bool    // принудительно скрыть docker от планировщика
 }
 
 // RunForever — главный цикл: подключение, переподключение с бэкоффом.
@@ -41,6 +42,7 @@ func RunForever(cfg Config) {
 	// захардкожены — при установке в профиль пользователя (без прав админа)
 	// файлы проектов разъезжались в C:\ProgramData, а агент жил в %LOCALAPPDATA%.
 	SetDataDir(cfg.DataDir)
+	go proxytransport.RunAgentTunnel(cfg.ServerURL, cfg.Token, shutdownCh)
 	// фоновая авто-проверка сборки (каждые 30 минут) + самообновление
 	StartAutoUpdate(cfg.ServerURL)
 

@@ -18,6 +18,7 @@ import (
 	"github.com/dreamcatchered/swagcore/internal/api"
 	"github.com/dreamcatchered/swagcore/internal/hub"
 	"github.com/dreamcatchered/swagcore/internal/model"
+	proxytransport "github.com/dreamcatchered/swagcore/internal/proxy"
 	"github.com/dreamcatchered/swagcore/internal/reconciler"
 	"github.com/dreamcatchered/swagcore/internal/store"
 )
@@ -78,6 +79,20 @@ func main() {
 	}
 	mux := http.NewServeMux()
 	apiSrv.RegisterRoutes(mux)
+	proxyManager := proxytransport.NewManager(st)
+	mux.HandleFunc("/proxy/agent", proxyManager.ServeAgentWS)
+	log.Printf("proxy data tunnel endpoint enabled (/proxy/agent)")
+	if proxyUser, proxyPass := os.Getenv("PROXY_USER"), os.Getenv("PROXY_PASSWORD"); proxyUser != "" && proxyPass != "" {
+		proxyListen := envOr("PROXY_LISTEN", "127.0.0.1:8182")
+		gateway := &proxytransport.Gateway{Manager: proxyManager, Username: proxyUser, Password: proxyPass, Listen: proxyListen}
+		go func() {
+			if err := gateway.ListenAndServe(); err != nil {
+				log.Printf("[proxy] gateway stopped: %v", err)
+			}
+		}()
+	} else {
+		log.Printf("[proxy] gateway disabled: set PROXY_USER and PROXY_PASSWORD")
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -90,10 +105,10 @@ func main() {
 		ReadHeaderTimeout: 10 * time.Second,
 		// Ограничения на тело запроса: в v0.5.x их не было вовсе, из-за чего
 		// один запрос мог съесть память сервера.
-		ReadTimeout:       10 * time.Minute, // большие загрузки артефактов
-		WriteTimeout:      10 * time.Minute,
-		IdleTimeout:       2 * time.Minute,
-		MaxHeaderBytes:    1 << 20,
+		ReadTimeout:    10 * time.Minute, // большие загрузки артефактов
+		WriteTimeout:   10 * time.Minute,
+		IdleTimeout:    2 * time.Minute,
+		MaxHeaderBytes: 1 << 20,
 	}
 
 	go func() {
