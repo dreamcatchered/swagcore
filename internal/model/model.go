@@ -40,23 +40,24 @@ type Metrics struct {
 
 // Node — зарегистрированная нода в реестре сервера.
 type Node struct {
-	ID         int64  `json:"id"`
-	TokenHash  string `json:"-"`
-	Hostname   string `json:"hostname"`
-	OS         string `json:"os"`
-	Arch       string `json:"arch"`
-	AgentVer   string `json:"agent_version"`
-	IP         string `json:"ip"`
-	Status     string `json:"status"` // online / offline
-	LastSeen   time.Time `json:"last_seen"`
-	CreatedAt  time.Time `json:"created_at"`
-	Metrics    *Metrics          `json:"metrics,omitempty"`
-	Labels     map[string]string `json:"labels,omitempty"`
-	Enabled    bool              `json:"enabled"`     // участвует в планировании (воркер)
-	MaxMemMB   int               `json:"max_mem_mb"`  // лимит RAM для проектов платформы (0 = без лимита)
-	MaxCPUs    float64           `json:"max_cpus"`    // лимит ядер CPU (0 = без лимита)
-	MaxDiskGB  int               `json:"max_disk_gb"` // лимит диска GB (0 = без лимита)
-	HasDocker  bool              `json:"has_docker"`
+	ID          int64             `json:"id"`
+	TokenHash   string            `json:"-"`
+	Hostname    string            `json:"hostname"`
+	DisplayName string            `json:"display_name,omitempty"` // UI label; does not change the agent hostname
+	OS          string            `json:"os"`
+	Arch        string            `json:"arch"`
+	AgentVer    string            `json:"agent_version"`
+	IP          string            `json:"ip"`
+	Status      string            `json:"status"` // online / offline
+	LastSeen    time.Time         `json:"last_seen"`
+	CreatedAt   time.Time         `json:"created_at"`
+	Metrics     *Metrics          `json:"metrics,omitempty"`
+	Labels      map[string]string `json:"labels,omitempty"`
+	Enabled     bool              `json:"enabled"`     // участвует в планировании (воркер)
+	MaxMemMB    int               `json:"max_mem_mb"`  // лимит RAM для проектов платформы (0 = без лимита)
+	MaxCPUs     float64           `json:"max_cpus"`    // лимит ядер CPU (0 = без лимита)
+	MaxDiskGB   int               `json:"max_disk_gb"` // лимит диска GB (0 = без лимита)
+	HasDocker   bool              `json:"has_docker"`
 	// InstanceID — постоянный идентификатор МАШИНЫ (не токена и не node_id).
 	// Агент генерирует его один раз в своём data-каталоге и шлёт в каждом hello.
 	// Нужен, чтобы хаб мог отличать «новая нода» от «та же самая машина»:
@@ -66,7 +67,7 @@ type Node struct {
 	InstanceID string `json:"instance_id,omitempty"`
 }
 
-// NodeToken — именованный токен подключения ноды.
+// NodeToken — именованный токен подключения ��оды.
 type NodeToken struct {
 	ID        int64     `json:"id"`
 	Name      string    `json:"name"`
@@ -327,7 +328,7 @@ type LogsChunk struct {
 //
 // v0.6.0: раньше агент отдавал только docker-контейнеры, поэтому для нод без
 // Docker (process-режим, типичная Windows-машина за NAT) drift-детекция была
-// слепой: упавший процесс числился running навсегда. Теперь агент сообщает и
+// слепой: упавший ��роцесс числился running навсегда. Теперь агент сообщает и
 // про процессы (pid + живость), и сервер сверяет оба вида.
 type ReconResult struct {
 	Containers []ContainerInfo `json:"containers"`

@@ -16,7 +16,7 @@ const tplRoot = `{{define "head"}}<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="dark">
+<meta name="color-scheme" content="light">
 <title>{{.Title}} · swagCore</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <style>
@@ -227,6 +227,228 @@ pre.out{background:#07090d;border:1px solid var(--border);border-radius:6px;padd
   h1{font-size:20px}
   .meters{grid-template-columns:1fr 1fr}
 }
+
+/* swagCore admin refresh — Dub-inspired border-first operations console */
+:root{
+  --bg:#ffffff;--panel:#ffffff;--panel2:#f5f5f5;--panel3:#fafafa;
+  --border:#e5e5e5;--border2:#c8c8c8;--line:#e5e5e5;--bg2:#f5f5f5;
+  --text:#171717;--muted:#525252;--dim:#737373;
+  --accent:#2563eb;--accent2:#1e40af;
+  --ok:#15803d;--warn:#c2410c;--err:#dc2626;
+  --r:12px;--r2:8px;
+  --font-display:"Satoshi","Avenir Next","Manrope",sans-serif;
+  --font-body:"Inter","Segoe UI",Arial,sans-serif;
+  --font-mono:"Geist Mono","IBM Plex Mono",Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;min-height:100%;background:var(--bg)}
+body{color:var(--text);font:14px/1.5 var(--font-body);-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+code,.mono,pre,.mono-id{font-family:var(--font-mono)}
+.layout{display:flex;min-height:100vh}
+.sidebar{width:226px;flex:0 0 226px;background:#fff;border-right:1px solid var(--border);padding:22px 12px 16px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.brand{display:flex;align-items:center;gap:10px;padding:0 12px 24px;font:500 18px/1 var(--font-display);letter-spacing:-.03em;color:#171717}
+.brand .dotmark{width:25px;height:25px;border-radius:8px;background:#171717;box-shadow:none;position:relative}
+.brand .dotmark:after{content:"s";position:absolute;inset:0;display:grid;place-items:center;color:#fff;font:600 16px var(--font-display)}
+.brand small{display:block;margin-top:5px;font:11px/1.2 var(--font-body);color:#737373;letter-spacing:0}
+.navlink{display:flex;align-items:center;gap:10px;padding:10px 12px;margin:2px 0;color:#525252;font-size:13px;border:0;border-radius:8px;transition:background .14s,color .14s}
+.navlink:hover{background:#f5f5f5;color:#171717;text-decoration:none}
+.navlink.active{background:#dbeaff;color:#171717;font-weight:600;border:0}
+.navlink .ic{width:18px;text-align:center;color:#525252;font-size:15px}
+.sidebar-foot{margin-top:auto;padding:14px 12px 0;border-top:1px solid var(--border);font-size:11px;color:#737373}
+.sidebar-foot a{display:block;padding:7px 0;color:#525252}
+.navspacer{flex:1}
+.content{flex:1;min-width:0;width:calc(100% - 226px);max-width:1500px;margin:0 auto;padding:34px clamp(22px,3vw,48px) 64px}
+h1{font:500 30px/1.12 var(--font-display);letter-spacing:-.035em;margin:0 0 6px;color:#171717}
+h2{font:600 11px/1.3 var(--font-body);margin:34px 0 12px;color:#737373;text-transform:uppercase;letter-spacing:.11em}
+h3{font:600 15px/1.35 var(--font-body);margin:0 0 10px;color:#171717}
+p{margin:8px 0}
+.sub{color:#737373;font-size:13px;margin:0}
+.hint{color:#737373;font-size:12px;margin:8px 0 0;line-height:1.55}
+a.link-plain{color:#171717}
+.mono-id{font-size:11px;color:#737373}
+.pagehead{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+.pagehead .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pagehead form{margin:0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;background:#0a0a0a;color:#fff;border:1px solid #0a0a0a;border-radius:8px;padding:8px 14px;font:500 13px var(--font-body);cursor:pointer;white-space:nowrap;transition:background .14s,border-color .14s}
+.btn:hover{background:#262626;border-color:#262626;text-decoration:none;color:#fff}
+.btn:active{transform:none}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn.ghost{background:#fff;color:#171717;border-color:#e5e5e5}
+.btn.ghost:hover{background:#f5f5f5;border-color:#d4d4d4;color:#171717}
+.btn.ok{background:#15803d;color:#fff;border-color:#15803d}
+.btn.danger{background:#fff;color:#b91c1c;border-color:#fecaca}
+.btn.danger:hover{background:#fef2f2;color:#991b1b;border-color:#fca5a5}
+.btn.sm{padding:5px 9px;font-size:11.5px;border-radius:7px}
+.btn.lg{padding:11px 18px;font-size:14px}
+.btnrow{display:flex;gap:6px;flex-wrap:wrap}
+form.inline{display:inline}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:6px}
+.stat{background:#fff;border:1px solid var(--border);border-radius:12px;padding:15px 16px;min-width:0}
+.stat .v{font:500 26px/1.15 var(--font-display);letter-spacing:-.03em;color:#171717}
+.stat .k{color:#525252;font-size:12px;margin-top:5px}
+.stat .x{color:#737373;font-size:11px;margin-top:4px}
+.stat.good .v{color:#15803d}.stat.bad .v{color:#dc2626}.stat.warn .v{color:#c2410c}
+.panel{background:#fff;border:1px solid var(--border);border-radius:12px;padding:17px 18px;margin:14px 0}
+.panel.accent{border-color:#bfdbfe;background:#eff6ff}
+.panel.good{border-color:#bbf7d0;background:#f0fdf4}
+.panel.danger{border-color:#fecaca;background:#fef2f2}
+.panel .panel{background:#fafafa;border-color:#eeeeee}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.issues{display:flex;flex-direction:column;gap:0;background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin:12px 0}
+.issue{display:flex;gap:11px;align-items:flex-start;padding:11px 14px;background:#fff;font-size:13px;border-bottom:1px solid var(--border)}
+.issue:last-child{border-bottom:0}
+.issue .tag{flex:0 0 auto;font-size:10px;font-weight:600;padding:3px 8px;border-radius:9999px;margin-top:1px}
+.issue.err .tag{background:#fee2e2;color:#991b1b}
+.issue.warn .tag{background:#ffedd5;color:#9a3412}
+.issue.info .tag{background:#dbeafe;color:#1d4ed8}
+.issue.ok .tag{background:#dcfce7;color:#166534}
+.tablewrap{border:1px solid var(--border);border-radius:12px;overflow:hidden;overflow-x:auto;background:#fff}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{padding:11px 13px;text-align:left;border-bottom:1px solid var(--border);vertical-align:middle}
+th{background:#fafafa;color:#737373;font-size:10px;text-transform:uppercase;letter-spacing:.09em;font-weight:600;white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:#fafafa}
+td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.empty{padding:30px 20px;text-align:center;color:#737373;font-size:13px;background:#fff;border:1px dashed #d4d4d4;border-radius:12px}
+.empty a{font-weight:600}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:9999px;font-size:10.5px;font-weight:600;white-space:nowrap}
+.badge:before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:0 0 auto}
+.badge.nodot:before{display:none}
+.b-online,.b-running,.b-ok{background:#dcfce7;color:#166534}
+.b-offline,.b-stopped,.b-disabled{background:#f5f5f5;color:#525252}
+.b-starting,.b-desired_running,.b-warn,.b-orphan{background:#ffedd5;color:#9a3412}
+.b-failed,.b-error,.b-desired_stopped{background:#fee2e2;color:#991b1b}
+.nodecards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr));gap:12px}
+.nodecard{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px 17px;transition:border-color .14s}
+.nodecard:hover{border-color:#bdbdbd}
+.nodecard.off{border-color:#fecaca}
+.nodecard .nhead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:7px}
+.nodecard .nname{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;min-width:0}
+.nodecard .nname a{color:#171717;overflow:hidden;text-overflow:ellipsis}
+.nodecard .nname a:hover{color:#2563eb;text-decoration:none}
+.nmeta{color:#737373;font-size:11px;margin-bottom:13px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.nmeta .sep{color:#c8c8c8}
+.meters{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-bottom:12px}
+.meter .ml{font:10px/1.2 var(--font-mono);color:#737373;text-transform:uppercase;letter-spacing:.06em}
+.meter .mv{font:500 12px/1.35 var(--font-mono);margin:4px 0 6px;color:#262626}
+.bar{height:5px;background:#f5f5f5;border-radius:999px;overflow:hidden;border:0}
+.bar i{display:block;height:100%;border-radius:999px;background:#2563eb}
+.bar i.ok{background:#16a34a}.bar i.warn{background:#ea580c}.bar i.err{background:#dc2626}
+.nfoot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:12px;margin-top:4px;font-size:11.5px;color:#737373}
+.projcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr));gap:12px}
+.projcard{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px 17px}
+.projcard:hover{border-color:#c8c8c8}
+.projcard .phead{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.projcard .pname{font-size:14px;font-weight:600}
+.projcard .pname a{color:#171717}
+.pline{color:#737373;font-size:12px;margin:7px 0 0}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:11px 0 0}
+.chip{background:#f5f5f5;border:1px solid #e5e5e5;border-radius:9999px;padding:3px 9px;font-size:10.5px;color:#525252}
+.chip.err{border-color:#fecaca;color:#991b1b;background:#fef2f2}
+.chip.warn{border-color:#fed7aa;color:#9a3412;background:#fff7ed}
+.chip.ok{border-color:#bbf7d0;color:#166534;background:#f0fdf4}
+input[type=text],input[type=password],input[type=number],select,textarea{background:#fff;color:#171717;border:1px solid #c8c8c8;border-radius:6px;padding:8px 11px;font:13px var(--font-body);width:100%;min-width:0}
+input::placeholder,textarea::placeholder{color:#a3a3a3}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+select{cursor:pointer}
+textarea{font-family:var(--font-mono);font-size:12px;line-height:1.6;min-height:230px;resize:vertical}
+label.fl{display:flex;flex-direction:column;gap:5px;font-size:11px;color:#525252;font-weight:600}
+label.fl input,label.fl select{min-width:0}
+.formgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;align-items:end}
+fieldset{border:1px solid var(--border);border-radius:8px;padding:14px 15px;margin:0 0 14px}
+legend{padding:0 7px;font-size:10px;color:#737373;text-transform:uppercase;letter-spacing:.08em}
+.cmdblock{background:#111827;border:1px solid #1f2937;border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:11px}
+.cmdblock code{flex:1;font:11.5px/1.65 var(--font-mono);color:#bfdbfe;word-break:break-all;user-select:all}
+.cmdblock .btn{flex:0 0 auto}
+.stepnum{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:9999px;background:#171717;color:#fff;font:600 11px var(--font-mono);flex:0 0 auto}
+.shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.shots a{display:block;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fafafa}
+.shots img{display:block;width:100%;height:auto}
+.shots .cap{padding:6px 9px;font:10px var(--font-mono);color:#737373;border-top:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+pre.log,pre.out{background:#111827;border:1px solid #273449;border-radius:8px;padding:13px;color:#e5e7eb;overflow:auto;max-height:520px;font:11.5px/1.6 var(--font-mono);white-space:pre-wrap;word-break:break-word}
+pre.out{margin:0;max-height:220px;font-size:10.5px}
+.toast{position:fixed;bottom:20px;right:20px;background:#171717;border:1px solid #404040;color:#fff;border-radius:8px;padding:11px 15px;font-size:12px;font-weight:500;opacity:0;transform:translateY(7px);transition:opacity .16s,transform .16s;pointer-events:none;z-index:100;max-width:420px}
+.toast.show{opacity:1;transform:none}
+.toast.err{border-color:#dc2626}
+.palette{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.palette .btn{font:10.5px var(--font-mono);padding:5px 8px;background:#fff;color:#525252;border-color:#e5e5e5}
+.palette .btn:hover{background:#f5f5f5;color:#171717}
+.rename-form{display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin-top:12px}
+.rename-form .fl{min-width:220px;max-width:390px;flex:1}
+.node-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+.node-toolbar .search{flex:1;min-width:200px;max-width:360px}
+.node-toolbar .filter{width:150px}
+.node-host{font:10.5px var(--font-mono);color:#737373}
+.terminal-panel{background:#111827;border-color:#1f2937;color:#e5e7eb}
+.terminal-panel h3{color:#f9fafb}
+.terminal-panel .hint,.terminal-panel .sub{color:#9ca3af}
+.terminal-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:13px}
+.terminal-dots{display:flex;gap:5px}
+.terminal-dots i{width:7px;height:7px;border-radius:50%;background:#4b5563}
+.terminal-tag{font:10px var(--font-mono);color:#9ca3af;letter-spacing:.04em}
+.terminal-form{display:flex;gap:8px;align-items:center}
+.terminal-form input{flex:1;background:#0b1220;color:#e5e7eb;border-color:#374151;font:12px var(--font-mono)}
+.terminal-form input[name=timeout]{flex:0 0 74px;width:74px}.terminal-form input:focus{border-color:#60a5fa;box-shadow:0 0 0 3px rgba(96,165,250,.14)}
+.terminal-form .btn{background:#2563eb;border-color:#2563eb;color:#fff}
+.terminal-panel .palette .btn{background:#1f2937;border-color:#374151;color:#d1d5db}
+.terminal-panel .palette .btn:hover{background:#374151;color:#fff}
+.terminal-panel .btn.ghost{background:#1f2937;color:#e5e7eb;border-color:#374151}
+.terminal-panel .btn.ghost:hover{background:#374151}
+.chat-box{flex:1;min-height:44vh;max-height:58vh;overflow-y:auto;padding:14px;border:1px solid var(--border);border-radius:8px;margin-bottom:10px;display:flex;flex-direction:column;gap:12px;background:#fafafa}
+.chat-empty{margin:auto;color:#737373;font-size:13px;text-align:center;max-width:420px}
+.chat-list button{display:block;width:100%;text-align:left;margin:3px 0;padding:9px 11px;background:#fff;border:1px solid var(--border);border-radius:8px;color:#171717;cursor:pointer;font-size:12px;font-family:inherit;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-list button:hover{border-color:#c8c8c8;background:#fafafa}
+.chat-list button.sel{border-color:#93c5fd;background:#eff6ff}
+.msg{max-width:82%;padding:10px 13px;border-radius:12px;font-size:12.5px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.msg.user{align-self:flex-end;background:#dbeafe;border:1px solid #bfdbfe;color:#1e3a8a}
+.msg.assistant{align-self:flex-start;background:#fff;border:1px solid var(--border);color:#262626}
+.msg .who{display:block;font:10px var(--font-mono);text-transform:uppercase;letter-spacing:.07em;color:#737373;margin-bottom:5px}
+.msg .tools{display:block;margin-top:8px;padding-top:7px;border-top:1px dashed var(--border);color:#2563eb;font-size:10.5px}
+.chat-input{display:flex;gap:8px;align-items:flex-end}
+.chat-input textarea{flex:1;resize:none;min-height:44px;max-height:150px;font-family:var(--font-body);font-size:13px;line-height:1.45}
+.chat-input button{height:44px;width:54px;font-size:15px;border-radius:8px;flex:0 0 auto}
+.chat-input button:disabled{opacity:.5;cursor:not-allowed}
+.typing{align-self:flex-start;color:#737373;font-size:12px;font-style:italic;padding:4px 8px}
+.typing:after{content:'…';animation:blink 1.2s infinite}
+@keyframes blink{50%{opacity:.2}}
+@media(max-width:1000px){.grid2{grid-template-columns:1fr}.content{padding-left:24px;padding-right:24px}}
+@media(max-width:820px){
+ .layout{flex-direction:column}
+ .sidebar{width:100%;flex:none;height:auto;position:sticky;top:0;z-index:30;flex-direction:row;overflow-x:auto;padding:8px 10px;align-items:center;gap:3px;border-right:0;border-bottom:1px solid var(--border)}
+ .brand{padding:0 10px 0 2px;border:0;font-size:14px;flex:0 0 auto}
+ .brand .dotmark{width:22px;height:22px}
+ .brand small{display:none}
+ .navlink{margin:0;padding:8px 10px;white-space:nowrap;font-size:12px;flex:0 0 auto}
+ .sidebar-foot{display:none}
+ .content{width:100%;padding:22px 14px 48px}
+ h1{font-size:25px}
+ .meters{grid-template-columns:1fr 1fr}
+ .nodecards,.projcards{grid-template-columns:1fr}
+ .pagehead{gap:12px}
+ .pagehead .actions{width:100%}
+ .pagehead .actions .btn{flex:1}
+ .terminal-form{align-items:stretch}
+ .rename-form .fl{max-width:none;min-width:0}
+ table{min-width:650px}
+ .shots{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+}
+@media(max-width:440px){
+ .brand{gap:6px;padding-right:5px}
+ .brand div{font-size:12px}
+ .navlink{padding:8px 7px;font-size:11px;gap:6px}
+ .navlink .ic{width:auto}
+ .stat{padding:12px}
+ .stat .v{font-size:22px}
+ .terminal-form{flex-wrap:wrap}
+ .terminal-form input{flex-basis:100%}
+ .terminal-form .btn{width:100%}
+}
+@media(prefers-reduced-motion:reduce){
+ *,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
 </style>
 </head>
 <body><div class="layout">
@@ -318,7 +540,7 @@ const tplDashboard = `{{define "dashboard"}}{{template "head" .}}
 {{$np := .NodeProj}}{{$npr := .NodeProjRun}}
 {{range .Nodes}}
 <tr>
-  <td><a href="/nodes/{{.ID}}" class="link-plain"><b>{{.Hostname}}</b></a><br><span class="mono-id">{{.OS}}/{{.Arch}} · агент {{.AgentVer}}</span></td>
+  <td><a href="/nodes/{{.ID}}" class="link-plain"><b>{{if .DisplayName}}{{.DisplayName}}{{else}}{{.Hostname}}{{end}}</b></a><br><span class="mono-id">{{.Hostname}} · {{.OS}}/{{.Arch}} · агент {{.AgentVer}}</span></td>
   <td>{{if eq .Status "online"}}<span class="badge b-online">на связи</span>{{else}}<span class="badge b-offline">не в сети</span>{{end}}{{if not .Enabled}}<br><span class="badge b-disabled nodot" style="margin-top:4px">выкл. планировщик</span>{{end}}</td>
   <td class="sub">{{since .LastSeen}}</td>
   <td><a href="/nodes/{{.ID}}">{{index $np .ID}} шт · {{index $npr .ID}} раб.</a></td>
@@ -391,14 +613,15 @@ const tplNodes = `{{define "nodes"}}{{template "head" .}}
 </div>
 
 {{if .Nodes}}
+<div class="node-toolbar"><input class="search" id="node-filter" type="text" placeholder="Найти ноду по имени, ОС или IP…"><select class="filter" id="node-status-filter"><option value="all">Все состояния</option><option value="online">На связи</option><option value="offline">Не в сети</option></select><span class="mono-id" id="node-count">{{len .Nodes}} нод</span></div>
 <div class="nodecards">
 {{$np := .NodeProj}}{{$npr := .NodeProjRun}}{{$usage := .Usage}}
 {{range .Nodes}}
-<div class="nodecard {{if ne .Status "online"}}off{{end}}">
+<div class="nodecard {{if ne .Status "online"}}off{{end}}" data-node-search="{{.Hostname}} {{.DisplayName}} {{.IP}} {{.OS}} {{.Arch}}" data-node-status="{{.Status}}">
   <div class="nhead">
     <div class="nname">
       {{if eq .Status "online"}}<span class="dot" style="width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block;box-shadow:0 0 8px var(--ok)"></span>{{else}}<span class="dot" style="width:8px;height:8px;border-radius:50%;background:var(--dim);display:inline-block"></span>{{end}}
-      <a href="/nodes/{{.ID}}">{{.Hostname}}</a>
+      <a href="/nodes/{{.ID}}">{{if .DisplayName}}{{.DisplayName}}{{else}}{{.Hostname}}{{end}}</a>
     </div>
     <div style="display:flex;gap:6px;align-items:center">
       {{if not .Enabled}}<span class="badge b-disabled nodot">выкл.</span>{{end}}
@@ -406,7 +629,7 @@ const tplNodes = `{{define "nodes"}}{{template "head" .}}
     </div>
   </div>
   <div class="nmeta">
-    <span>{{.OS}}/{{.Arch}}</span><span class="sep">·</span>
+    <span class="node-host">{{.Hostname}}</span><span class="sep">·</span><span>{{.OS}}/{{.Arch}}</span><span class="sep">·</span>
     <span>агент {{.AgentVer}}</span><span class="sep">·</span>
     <span>{{if .HasDocker}}есть Docker{{else}}без Docker{{end}}</span>
     {{if .MaxMemMB}}<span class="sep">·</span><span>лимит {{mb .MaxMemMB}}</span>{{end}}
@@ -467,11 +690,16 @@ const tplNodes = `{{define "nodes"}}{{template "head" .}}
 const tplNode = `{{define "node"}}{{template "head" .}}
 <div class="pagehead">
   <div>
-    <h1>{{.N.Hostname}}</h1>
+    <h1>{{if .N.DisplayName}}{{.N.DisplayName}}{{else}}{{.N.Hostname}}{{end}}</h1>
     <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:6px">
       <span class="badge b-{{.N.Status}}">{{if eq .N.Status "online"}}на связи{{else}}не в сети{{end}}</span>
       {{if not .N.Enabled}}<span class="badge b-disabled nodot">выключена в планировщике</span>{{end}}
-      <span class="mono-id">ID {{.N.ID}} · {{.N.OS}}/{{.N.Arch}} · агент {{.N.AgentVer}}</span>
+      <span class="mono-id">ID {{.N.ID}} · <span class="node-host">{{.N.Hostname}}</span> · {{.N.OS}}/{{.N.Arch}} · агент {{.N.AgentVer}}</span>
+    <form class="rename-form" method="post" action="/api/action" onsubmit="return act(this,event)" data-refresh="500">
+      <input type="hidden" name="__do" value="/nodes/rename"><input type="hidden" name="id" value="{{.N.ID}}">
+      <label class="fl">Отображаемое имя<input type="text" name="display_name" maxlength="64" value="{{.N.DisplayName}}" placeholder="{{.N.Hostname}}"></label>
+      <button class="btn ghost sm" type="submit">Сохранить имя</button>
+    </form>
     </div>
   </div>
   <div class="actions">
@@ -545,13 +773,15 @@ const tplNode = `{{define "node"}}{{template "head" .}}
     </form>
   </div>
 
-  <div class="panel">
-    <h3>Выполнить команду на ноде</h3>
-    <form method="post" action="/api/action" onsubmit="return act(this,event)" data-refresh="3000" style="display:flex;gap:8px">
+  <div class="panel terminal-panel">
+    <div class="terminal-head"><div class="terminal-dots"><i></i><i></i><i></i></div><span class="terminal-tag">REMOTE SHELL · NODE {{.N.ID}}</span></div>
+    <h3>Терминал ноды</h3>
+    <p class="sub" style="margin:0 0 12px">Разовая команда через активный агент. Таймаут до 600 секунд; история и вывод сохраняются ниже.</p>
+    <form class="terminal-form" method="post" action="/api/action" onsubmit="return act(this,event)" data-refresh="3000">
       <input type="hidden" name="__do" value="/nodes/exec"><input type="hidden" name="id" value="{{.N.ID}}">
-      <input type="text" name="command" id="cmd-input" placeholder="команда ({{if eq .N.OS "windows"}}cmd /c{{else}}sh -c{{end}})" style="flex:1">
+      <input type="text" name="command" id="cmd-input" placeholder="$ команда · {{if eq .N.OS "windows"}}PowerShell / cmd{{else}}sh{{end}}" style="flex:1">
       <input type="number" name="timeout" value="30" min="1" max="600" style="width:74px" title="таймаут, сек">
-      <button class="btn" type="submit">Выполнить</button>
+      <button class="btn" type="submit">▶ Выполнить</button>
     </form>
     <div class="palette">
     {{if eq .N.OS "windows"}}
@@ -666,8 +896,7 @@ const tplAddNode = `{{define "addnode"}}{{template "head" .}}
     <div class="cmdblock" style="margin-top:9px">
       <code id="cmd-win2">{{.CmdWinM}}</code>
       <button class="btn" type="button" onclick="copyCode('cmd-win2',this)">Скопировать</button>
-    </div>
-  </details>
+    </div></details>
 
   <div class="panel accent" style="margin:18px 0 0">
     <h3>Что произойдёт на новой машине</h3>
@@ -721,7 +950,7 @@ const tplAddNode = `{{define "addnode"}}{{template "head" .}}
     <p class="sub"><b>Windows.</b> Открыли PowerShell, вставили одну строку, нажали Enter, согласились на запрос прав. Через полминуты нода в панели. Больше ничего делать не нужно — не нужны Python, Docker, Git или настройки.</p>
     <p class="sub"><b>Linux.</b> Та же команда через <span class="mono">sudo</span>. Установщик дополнительно поставит Docker, если его ещё нет.</p>
     <p class="sub"><b>Что дальше.</b> Нода сразу доступна для деплоя проектов: <a href="/projects#deploy">Проекты → Задеплоить</a>. Ничего больше настраивать не нужно.</p>
-    <p class="hint">Ноды за натом (домашний ПК без белого IP) работают: агент сам устанавливает исходящее соединение, входящие порты не нужны.</p>
+    <p class="hint">Ноды за натом (домашний ПК без белого IP) работают: агент сам устанавливает исходящее ��оединение, входящие порты не нужны.</p>
   </div>
 </div>
 
@@ -783,7 +1012,7 @@ const tplProjects = `{{define "projects"}}{{template "head" .}}
     {{$instNodeID := .NodeID}}
     {{$hn := ""}}{{range $nodes}}{{if eq .ID $instNodeID}}{{$hn = .Hostname}}{{end}}{{end}}
     <span class="badge b-{{.Status}}"{{if eq .Status "failed"}} title="{{.Error}}"{{end}}>
-      {{if $hn}}<a style="color:inherit" href="/nodes/{{$instNodeID}}">{{$hn}}</a>{{else}}нода {{$instNodeID}}{{end}}: {{if eq .Status "running"}}работает{{else if eq .Status "failed"}}ошибка{{else if eq .Status "starting"}}запускается{{else if eq .Status "orphan"}}нода не в сети{{else}}{{.Status}}{{end}}
+      {{if $hn}}<a style="color:inherit" href="/nodes/{{$instNodeID}}">{{$hn}}</a>{{else}}нода {{$instNodeID}}{{end}}: {{if eq .Status "running"}}работает{{else if eq .Status "failed"}}ошибка{{else if eq .Status "starting"}}запускает��я{{else if eq .Status "orphan"}}нода не в сети{{else}}{{.Status}}{{end}}
     </span>
   {{else}}
     <span class="chip warn">нет экземпляров — платформа ещё не разместила проект</span>
@@ -1024,28 +1253,26 @@ const tplEvents = `{{define "events"}}{{template "head" .}}
 const tplLogin = `{{define "login"}}<!doctype html>
 <html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="dark">
+<meta name="color-scheme" content="light">
 <title>Вход · swagCore</title><link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <style>
-:root{--bg:#0a0c11;--panel:#111520;--border:#252c3d;--text:#e9edf6;--muted:#8b95ad;--accent:#5b8cff;--err:#ff6b6b;--ok:#3ddc84}
+ :root{--bg:#ffffff;--panel:#ffffff;--border:#e5e5e5;--text:#171717;--muted:#525252;--accent:#2563eb;--err:#dc2626;--ok:#15803d}
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
-  background:radial-gradient(1100px 520px at 50% -12%,#1a2340 0%,var(--bg) 62%) no-repeat,var(--bg);
-  color:var(--text);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-.box{width:100%;max-width:378px;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:32px}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:#f5f5f5;color:var(--text);font:14px/1.6 "Inter","Segoe UI",Arial,sans-serif}
+.box{width:100%;max-width:390px;background:#fff;border:1px solid var(--border);border-radius:16px;padding:32px}
 h1{font-size:21px;margin:0 0 4px;letter-spacing:-.02em}
 h1 b{font-weight:700}
 .sub{color:var(--muted);font-size:13px;margin:0 0 22px}
 label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-weight:500}
-input{width:100%;background:#080a0e;color:var(--text);border:1px solid #333c52;border-radius:9px;padding:11px 13px;font-size:15px;font-family:inherit}
+input{width:100%;background:#fff;color:var(--text);border:1px solid #c8c8c8;border-radius:6px;padding:11px 13px;font-size:14px;font-family:inherit}
 input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(91,140,255,.15)}
-button{width:100%;margin-top:16px;background:var(--accent);color:#fff;border:none;border-radius:9px;padding:12px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit}
-button:hover{filter:brightness(1.12)}
+button{width:100%;margin-top:16px;background:#0a0a0a;color:#fff;border:1px solid #0a0a0a;border-radius:8px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+button:hover{background:#262626}
 .msg{padding:10px 13px;border-radius:9px;font-size:13.5px;margin-bottom:16px}
 .msg.err{background:rgba(255,107,107,.11);border:1px solid rgba(255,107,107,.35);color:var(--err)}
 .msg.warn{background:rgba(255,176,32,.11);border:1px solid rgba(255,176,32,.35);color:#ffb020}
 .tip{margin-top:20px;padding-top:16px;border-top:1px solid var(--border);color:var(--muted);font-size:12.5px}
-.tip code{background:#080a0e;border:1px solid var(--border);border-radius:5px;padding:2px 6px;font-size:12px;color:#a8d0ff}
+.tip code{background:#f5f5f5;border:1px solid var(--border);border-radius:5px;padding:2px 6px;font-size:12px;color:#262626}
 </style></head>
 <body><div class="box">
 <h1><b>swag</b>Core</h1>
@@ -1118,8 +1345,7 @@ function renderMsg(m){
   if (m.tools){ try{ const steps = JSON.parse(m.tools);
     if (Array.isArray(steps) && steps.length) html += '<span class="tools">выполнено действий: ' + steps.length + ' — ' + esc(steps.join(' · ')) + '</span>';
   }catch(e){} }
-  el.innerHTML = html; return el;
-}
+  el.innerHTML = html; return el;}
 async function loadChats(){
   const j = await jget('/api/ai/chats');
   const box = document.getElementById('chat-list'); box.innerHTML = '';
@@ -1200,6 +1426,30 @@ function toast(msg, err){
   clearTimeout(toastT);
   toastT = setTimeout(()=>t.classList.remove('show'), err ? 6500 : 2800);
 }
+
+// ---------- поиск и фильтрация нод ----------
+function filterNodes(){
+  const root = document.querySelector('.nodecards');
+  if (!root) return;
+  const q = (document.getElementById('node-filter')?.value || '').trim().toLowerCase();
+  const status = document.getElementById('node-status-filter')?.value || 'all';
+  const cards = [...root.querySelectorAll('.nodecard')];
+  let shown = 0;
+  for (const card of cards){
+    const matchText = (card.dataset.nodeSearch || '').toLowerCase().includes(q);
+    const matchStatus = status === 'all' || card.dataset.nodeStatus === status;
+    const visible = matchText && matchStatus;
+    card.hidden = !visible;
+    if (visible) shown++;
+  }
+  const count = document.getElementById('node-count');
+  if (count) count.textContent = shown + ' из ' + cards.length;
+}
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('node-filter')?.addEventListener('input', filterNodes);
+  document.getElementById('node-status-filter')?.addEventListener('change', filterNodes);
+  filterNodes();
+});
 
 // ---------- копирование блока кода ----------
 function copyCode(id, btn){

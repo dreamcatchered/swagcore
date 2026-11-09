@@ -61,7 +61,8 @@ CREATE TABLE IF NOT EXISTS nodes (
 	last_seen TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	metrics TEXT NOT NULL DEFAULT '{}',
-	labels TEXT NOT NULL DEFAULT '{}'
+	labels TEXT NOT NULL DEFAULT '{}',
+	display_name TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS projects (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -136,6 +137,7 @@ CREATE INDEX IF NOT EXISTS idx_results_node ON results(node_id, id);
 		`ALTER TABLE node_tokens ADD COLUMN max_disk_gb INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE results ADD COLUMN ts INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE nodes ADD COLUMN instance_id TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE nodes ADD COLUMN display_name TEXT NOT NULL DEFAULT ''`,
 		`CREATE INDEX IF NOT EXISTS idx_nodes_instance ON nodes(instance_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_nodes_tokenhash ON nodes(token_hash)`,
 		`CREATE INDEX IF NOT EXISTS idx_instances_node ON instances(node_id)`,
@@ -261,7 +263,7 @@ func (s *Store) DBSize() (db, wal int64) {
 // посторонний rowid, поэтому делаем явный SELECT, затем UPDATE или INSERT.
 // Лимиты (mem/cpu/disk) — серверные настройки: пишутся только при первой
 // регистрации (INSERT), при повторных hello НЕ перезаписываются.
-const nodeCols = `id, hostname, os, arch, agent_version, ip, status, last_seen, created_at, metrics, labels, enabled, max_mem_mb, has_docker, max_cpus, max_disk_gb, instance_id`
+const nodeCols = `id, hostname, os, arch, agent_version, ip, status, last_seen, created_at, metrics, labels, enabled, max_mem_mb, has_docker, max_cpus, max_disk_gb, instance_id, display_name`
 
 // UpsertNodeByToken находит ноду по хешу токена и обновляет её данные.
 // Внимание: LastInsertId после ON CONFLICT DO UPDATE в SQLite возвращает
@@ -441,7 +443,10 @@ func (s *Store) SetNodeLimits(id int64, maxMemMB int, maxCPUs float64, maxDiskGB
 	return err
 }
 
-func boolInt(b bool) int {
+func (s *Store) SetNodeDisplayName(id int64, name string) error {
+	_, err := s.db.Exec(`UPDATE nodes SET display_name=? WHERE id=?`, name, id)
+	return err
+}func boolInt(b bool) int {
 	if b {
 		return 1
 	}
@@ -506,8 +511,9 @@ func (s *Store) ListTokens() ([]model.NodeToken, error) {
 // подключении), а HTTP-часть (загрузка скриншотов, скачивание артефактов)
 // начинает отдавать 401. Наблюдалось как «скриншот не работает».
 // Поэтому: (1) токен, занятый нодой, нельзя удалить без force;
-//           (2) сама авторизация ноды принимает и токен из node_tokens,
-//               и хеш, сохранённый в самой ноде (см. NodeAuthHashes).
+//
+//	(2) сама авторизация ноды принимает и токен из node_tokens,
+//	    и хеш, сохранённый в самой ноде (см. NodeAuthHashes).
 func (s *Store) TokenInUseByNode(tokenHash string) (string, bool) {
 	var hostname string
 	err := s.db.QueryRow(`SELECT hostname FROM nodes WHERE token_hash=? AND status='online'`, tokenHash).Scan(&hostname)
@@ -541,7 +547,7 @@ func (s *Store) MarkTokenUsed(hash, hostname string) {
 	_, _ = s.db.Exec(`UPDATE node_tokens SET used=1, used_by=? WHERE token_hash=?`, hostname, hash)
 }
 
-// DeleteToken удаляет токен.
+// DeleteToken удаляет ��окен.
 func (s *Store) DeleteToken(id int64) error {
 	_, err := s.db.Exec(`DELETE FROM node_tokens WHERE id=?`, id)
 	return err
@@ -590,7 +596,6 @@ func (s *Store) PurgeOrphanInstances() (int64, error) {
 	}
 	return res.RowsAffected()
 }
-
 
 // InstancesOfProject — экземпляры проекта.
 func (s *Store) InstancesOfProject(projectID int64) ([]model.ProjectInstance, error) {
@@ -801,10 +806,10 @@ type scanFunc func(dest ...any) error
 func scanNode(scan scanFunc) (*model.Node, error) {
 	var n model.Node
 	var metrics, labels string
-	var lastSeen, createdAt string
+	var lastSeen, createdAt, displayName string
 	var enabled, hasDocker, maxDiskGB int
 	var maxCPUs float64
-	err := scan(&n.ID, &n.Hostname, &n.OS, &n.Arch, &n.AgentVer, &n.IP, &n.Status, &lastSeen, &createdAt, &metrics, &labels, &enabled, &n.MaxMemMB, &hasDocker, &maxCPUs, &maxDiskGB, &n.InstanceID)
+	err := scan(&n.ID, &n.Hostname, &n.OS, &n.Arch, &n.AgentVer, &n.IP, &n.Status, &lastSeen, &createdAt, &metrics, &labels, &enabled, &n.MaxMemMB, &hasDocker, &maxCPUs, &maxDiskGB, &n.InstanceID, &displayName)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -821,6 +826,7 @@ func scanNode(scan scanFunc) (*model.Node, error) {
 	n.HasDocker = hasDocker == 1
 	n.MaxCPUs = maxCPUs
 	n.MaxDiskGB = maxDiskGB
+	n.DisplayName = displayName
 	return &n, nil
 }
 
@@ -889,8 +895,7 @@ func (s *Store) ListProjects() ([]model.Project, error) {
 }
 
 // DeleteProject удаляет проект из БД КАСКАДНО.
-//
-// v0.6.0 (баг v0.5.x): удалялась только строка из projects, а экземпляры в
+//// v0.6.0 (баг v0.5.x): удалялась только строка из projects, а экземпляры в
 // instances оставались сиротами (project_id указывал на несуществующий проект).
 // Из-за этого планировщик/реконсилер видели «проект на ноде», которого нет, а
 // панель показывала мусорные строки. Теперь чистим instances и logs.

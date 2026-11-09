@@ -117,6 +117,7 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/nodes/delete-token", s.requireAdmin(s.handleDeleteToken))
 	mux.HandleFunc("/nodes/recon", s.requireAdmin(s.handleNodeRecon))
 	mux.HandleFunc("/nodes/update", s.requireAdmin(s.handleNodeUpdate))
+	mux.HandleFunc("/nodes/rename", s.requireAdmin(s.handleNodeRename))
 	mux.HandleFunc("/nodes/update-all", s.requireAdmin(s.handleNodeUpdateAll))
 	mux.HandleFunc("/nodes/exec", s.requireAdmin(s.handleNodeExec))
 	mux.HandleFunc("/nodes/power", s.requireAdmin(s.handleNodePower))
@@ -282,6 +283,8 @@ func (s *Server) apiAction(w http.ResponseWriter, r *http.Request) {
 		s.handleDeleteToken(capt, r)
 	case "/nodes/limits":
 		s.handleNodeLimits(capt, r)
+	case "/nodes/rename":
+		s.handleNodeRename(capt, r)
 	case "/nodes/exec":
 		s.handleNodeExec(capt, r)
 	case "/nodes/power":
@@ -444,8 +447,7 @@ func (s *Server) apiLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	logs, err := s.St.GetLogs(id, 500)
-	if err != nil {
-		httpError(w, err)
+	if err != nil {httpError(w, err)
 		return
 	}
 	writeJSON(w, logs)
@@ -469,13 +471,13 @@ func (s *Server) apiHealth(w http.ResponseWriter, r *http.Request) {
 	running := countStatus(projects, model.StatusRunning)
 	dbSize, walSize := s.St.DBSize()
 	writeJSON(w, map[string]any{
-		"ok":      true,
-		"version": model.VersionTag(),
-		"nodes":   len(nodes),
-		"online":  online,
-		"projects": len(projects),
-		"running": running,
-		"db_bytes": dbSize,
+		"ok":        true,
+		"version":   model.VersionTag(),
+		"nodes":     len(nodes),
+		"online":    online,
+		"projects":  len(projects),
+		"running":   running,
+		"db_bytes":  dbSize,
 		"wal_bytes": walSize,
 	})
 }
@@ -692,7 +694,7 @@ func fileSHA256Local(path string) (string, error) {
 }
 
 // handleAgentUpload принимает файлы от агентов (скриншоты).
-// Авторизация: Bearer admin-токен ИЛИ X-Node-Token (валидный токен ноды).
+// Авторизация: [REDACTED:bearer-auth:13]токен ИЛИ X-Node-Token (валидный токен ноды).
 func (s *Server) handleAgentUpload(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "POST only", 405)
@@ -777,7 +779,7 @@ func (s *Server) handleCreateToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.St.AddEvent("info", "api", fmt.Sprintf("создан токен ноды «%s» (лимиты: %d МБ / %.1f CPU / %d ГБ)", name, maxMem, maxCPUs, maxDisk))
-	jsonRedirect(w, "/add-node", "токен создан ✓ — скопируйте команду установки ниже")
+	jsonRedirect(w, "/add-node", "токен создан ✓ �� скопируйте команду установки ниже")
 }
 
 // handleDeleteToken удаляет неиспользованный токен ноды.
@@ -796,7 +798,7 @@ func (s *Server) handleDeleteToken(w http.ResponseWriter, r *http.Request) {
 				if t.ID != id {
 					continue
 				}
-if host, used := s.St.TokenInUseByNode(hub.HashToken(t.Token)); used {
+				if host, used := s.St.TokenInUseByNode(hub.HashToken(t.Token)); used {
 					msg := "токен сейчас использует нода " + host + " (она на связи). "
 					msg += "Если удалить токен, нода потеряет возможность загружать скриншоты "
 					msg += "и качать артефакты проектов. Сначала выключите ноду, либо подтвердите удаление."
@@ -816,6 +818,39 @@ if host, used := s.St.TokenInUseByNode(hub.HashToken(t.Token)); used {
 }
 
 // handleNodeLimits сохраняет лимиты и режим планирования ноды.
+func (s *Server) handleNodeRename(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "POST only", http.StatusMethodNotAllowed)
+		return
+	}
+	parseFormAny(r)
+	id, err := strconv.ParseInt(r.PostFormValue("id"), 10, 64)
+	if err != nil || id <= 0 {
+		http.Error(w, "bad node id", http.StatusBadRequest)
+		return
+	}
+	name := strings.TrimSpace(r.PostFormValue("display_name"))
+	if len([]rune(name)) > 64 || strings.ContainsAny(name, "\r\n\t\x00") {
+		http.Error(w, "имя должно быть не длиннее 64 символов и в одну строку", http.StatusBadRequest)
+		return
+	}
+	n, err := s.St.NodeByID(id)
+	if err != nil || n == nil {
+		http.Error(w, "нода не найдена", http.StatusNotFound)
+		return
+	}
+	if err := s.St.SetNodeDisplayName(id, name); err != nil {
+		httpError(w, err)
+		return
+	}
+	label := name
+	if label == "" {
+		label = n.Hostname
+	}
+	s.St.AddEvent("info", "api", fmt.Sprintf("имя ноды #%d изменено на %q", id, label))
+	jsonRedirect(w, "/nodes/"+strconv.FormatInt(id, 10), "имя ноды сохранено")
+}
+
 func (s *Server) handleNodeLimits(w http.ResponseWriter, r *http.Request) {
 	_ = r.ParseForm()
 	id, _ := strconv.ParseInt(r.PostFormValue("id"), 10, 64)
@@ -861,8 +896,7 @@ func (s *Server) handleNodeMaxMem(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleNodeExec выполняет команду на ноде.
-func (s *Server) handleNodeExec(w http.ResponseWriter, r *http.Request) {
-	_ = r.ParseForm()
+func (s *Server) handleNodeExec(w http.ResponseWriter, r *http.Request) {_ = r.ParseForm()
 	id, _ := strconv.ParseInt(r.PostFormValue("id"), 10, 64)
 	command := strings.TrimSpace(r.PostFormValue("command"))
 	timeout, _ := strconv.Atoi(r.PostFormValue("timeout"))
@@ -1310,9 +1344,7 @@ func isHTTPS(r *http.Request) bool {
 		return true
 	}
 	return strings.HasPrefix(r.Header.Get("X-Forwarded-Proto"), "https")
-}
-
-// ---------- Страницы ----------
+}// ---------- Страницы ----------
 
 func (s *Server) handlePage(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/login" {
@@ -1339,7 +1371,7 @@ func (s *Server) handlePage(w http.ResponseWriter, r *http.Request) {
 	case "/add-node":
 		s.handleAddNodePage(w, r)
 	case "/ai":
-	s.render(w, "ai", map[string]any{"Version": model.VersionTag()})
+		s.render(w, "ai", map[string]any{"Version": model.VersionTag()})
 	default:
 		http.NotFound(w, r)
 	}
@@ -1409,11 +1441,11 @@ func (s *Server) handleAddNodePage(w http.ResponseWriter, r *http.Request) {
 	newTok := r.URL.Query().Get("token")
 	newName := r.URL.Query().Get("name")
 	data := map[string]any{
-		"Tokens":  tokens,
-		"Version": model.VersionTag(),
-		"BaseURL": s.PublicBase,
-		"CmdWin":  s.installCommandWinToken(newTok, newName),
-		"CmdWinM": s.installCommandWin(""),
+		"Tokens":   tokens,
+		"Version":  model.VersionTag(),
+		"BaseURL":  s.PublicBase,
+		"CmdWin":   s.installCommandWinToken(newTok, newName),
+		"CmdWinM":  s.installCommandWin(""),
 		"CmdLinux": s.installCommandLinux(newTok),
 	}
 	if newTok != "" {
@@ -1541,13 +1573,13 @@ func (s *Server) pageDashboard(w http.ResponseWriter, r *http.Request) {
 		"Running":  countStatus(projects, model.StatusRunning),
 		"Failed":   countStatus(projects, model.StatusFailed),
 		"NodeProj": nodeProj, "NodeProjRun": nodeProjRun,
-		"Issues":    issues,
-		"AvgCPU":    totalCPU,
-		"MemUsed":   totalMemUsed, "MemTotal": totalMem,
-		"DiskUsed":  diskUsed, "DiskTotal": diskTotal,
-		"DBSize":    dbSize, "WALSize": walSize,
-		"BaseURL":   s.PublicBase,
-		"Version":   model.VersionTag(),
+		"Issues":  issues,
+		"AvgCPU":  totalCPU,
+		"MemUsed": totalMemUsed, "MemTotal": totalMem,
+		"DiskUsed": diskUsed, "DiskTotal": diskTotal,
+		"DBSize": dbSize, "WALSize": walSize,
+		"BaseURL": s.PublicBase,
+		"Version": model.VersionTag(),
 	})
 }
 
@@ -1761,8 +1793,7 @@ func sinceHuman(t time.Time) string {
 		return fmt.Sprintf("%d ч назад", int(d.Hours()))
 	default:
 		return fmt.Sprintf("%d дн назад", int(d.Hours()/24))
-	}
-}
+	}}
 
 // ---------- ИИ-агент: HTTP API ----------
 
